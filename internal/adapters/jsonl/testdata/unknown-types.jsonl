@@ -1,0 +1,3 @@
+{"type":"queue-operation","uuid":"qop-evt-001","timestamp":"2026-04-30T09:00:00.000Z","sessionId":"unknown-session","parentUuid":"","operation":"enqueue","content":"<task-notification><status>pending</status></task-notification>"}
+{"type":"ai-title","uuid":"ai-title-evt-002","timestamp":"2026-04-30T09:01:00.000Z","sessionId":"unknown-session","parentUuid":"qop-evt-001","title":"Building the walking skeleton"}
+{"type":"permission-mode","uuid":"perm-evt-003","timestamp":"2026-04-30T09:02:00.000Z","sessionId":"unknown-session","parentUuid":"ai-title-evt-002","mode":"auto"}

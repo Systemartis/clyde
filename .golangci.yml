@@ -1,0 +1,141 @@
+# golangci-lint v2 config for clyde.
+# The depguard rules enforce hexagonal architecture at lint-time:
+# domain stays pure, application uses ports (not adapters).
+#
+# Module path used below: github.com/vladpb/clyde
+# Confirm/change in /sdd-new bootstrap-skeleton when `go mod init` runs.
+
+version: "2"
+
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gocritic
+    - revive
+    - misspell
+    - unconvert
+    - gocyclo
+    - gocognit
+    - bodyclose
+    - noctx
+    - depguard
+    - nakedret
+    - dupl
+
+  settings:
+    depguard:
+      rules:
+        domain-pure:
+          list-mode: lax
+          files:
+            - "**/internal/domain/**/*.go"
+          deny:
+            - pkg: "github.com/charmbracelet/bubbletea"
+              desc: "domain is pure — no UI imports"
+            - pkg: "github.com/charmbracelet/lipgloss"
+              desc: "domain is pure — no UI imports"
+            - pkg: "charm.land/bubbletea"
+              desc: "domain is pure — no UI imports"
+            - pkg: "charm.land/lipgloss"
+              desc: "domain is pure — no UI imports"
+            - pkg: "github.com/fsnotify/fsnotify"
+              desc: "domain is pure — no I/O imports"
+            - pkg: "net/http"
+              desc: "domain is pure — no transport"
+            - pkg: "os"
+              desc: "domain is pure — file I/O lives in adapters"
+            - pkg: "github.com/vladpb/clyde/internal/adapters"
+              desc: "domain must not depend on adapters"
+            - pkg: "github.com/vladpb/clyde/internal/application"
+              desc: "domain must not depend on application"
+
+        application-via-ports:
+          list-mode: lax
+          files:
+            - "**/internal/application/**/*.go"
+          deny:
+            - pkg: "github.com/vladpb/clyde/internal/adapters"
+              desc: "application uses ports (interfaces), not adapters"
+            - pkg: "github.com/charmbracelet/bubbletea"
+              desc: "application is pure use cases — no UI"
+            - pkg: "github.com/charmbracelet/lipgloss"
+              desc: "application is pure use cases — no UI"
+            - pkg: "charm.land/bubbletea"
+              desc: "application is pure use cases — no UI"
+            - pkg: "charm.land/lipgloss"
+              desc: "application is pure use cases — no UI"
+
+        ports-pure:
+          list-mode: lax
+          files:
+            - "**/internal/ports/**/*.go"
+          deny:
+            - pkg: "github.com/vladpb/clyde/internal/adapters"
+              desc: "ports are interfaces only — no concrete adapter imports"
+
+    revive:
+      rules:
+        - name: exported
+        - name: unused-parameter
+          disabled: true
+        - name: package-comments
+          disabled: true
+
+    gocyclo:
+      # Raised from 15: TUI adapters (keyboard/mouse dispatch, renderers) are
+      # legitimately complex; path-based exclusions handle the worst cases.
+      min-complexity: 20
+
+    gocognit:
+      # Raised from 20: event-dispatch code in the tui package has inherently
+      # deep branch trees; path-based exclusions exempt that package entirely.
+      min-complexity: 30
+
+    misspell:
+      locale: US
+
+  exclusions:
+    rules:
+      # Test files: relax structural and complexity checks — test functions are
+      # allowed to be verbose/repetitive, and British spellings in comments
+      # inside tests don't affect production correctness.
+      - path: _test\.go
+        linters:
+          - dupl
+          - gocyclo
+          - gocognit
+          - errcheck
+          - misspell
+
+      # TUI adapter package: keyboard/mouse handlers, renderers, and viewers
+      # are event-dispatch state machines. Their cyclomatic/cognitive complexity
+      # is structural, not a sign of bad design — excluding them keeps the
+      # linters meaningful for domain and application code.
+      - path: internal/adapters/tui/
+        linters:
+          - gocyclo
+          - gocognit
+
+      # staticcheck: QF1012 prefers fmt.Fprintf over WriteString(fmt.Sprintf(...)).
+      # This is a stylistic preference, not a correctness issue.
+      - linters:
+          - staticcheck
+        text: "QF1012"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/vladpb/clyde

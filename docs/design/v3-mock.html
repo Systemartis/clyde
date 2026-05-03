@@ -1,0 +1,368 @@
+<style>
+.cc{font-family:'JetBrains Mono','IBM Plex Mono','SF Mono',Menlo,ui-monospace,monospace;background:#15151f;color:#c0caf5;border-radius:var(--border-radius-lg);padding:14px;font-size:11.5px;line-height:1.5;overflow:hidden;border:1px solid #2a2e44;}
+.cc *,.cc *::before,.cc *::after{box-sizing:border-box;}
+.cc-tb{display:flex;align-items:center;gap:9px;padding-bottom:10px;border-bottom:1px dashed #232540;margin-bottom:11px;}
+.cc-name{color:#bb9af7;font-weight:500;letter-spacing:.22em;font-size:13px;padding-right:2px;}
+.cc-tb .b{color:#2a2e44;}
+.cc-tb .path{color:#565f89;font-size:11px;}
+.cc-tb .path b{color:#7dcfff;font-weight:500;}
+.cc-tb .meta{margin-left:auto;display:flex;gap:13px;align-items:center;}
+.cc-tb .it{display:inline-flex;align-items:center;gap:5px;color:#565f89;font-size:11px;}
+.cc-tb .it b{color:#c0caf5;font-weight:500;}
+.live{display:inline-block;width:7px;height:7px;border-radius:50%;background:#9ece6a;animation:pd 1.6s infinite;}
+@keyframes pd{0%{box-shadow:0 0 0 0 rgba(158,206,106,.45);}70%{box-shadow:0 0 0 4px rgba(158,206,106,0);}100%{box-shadow:0 0 0 0 rgba(158,206,106,0);}}
+.cc-grid{display:grid;grid-template-columns:170px 310px 1fr;gap:8px;}
+.cc-col{display:flex;flex-direction:column;gap:8px;min-width:0;}
+.p{position:relative;border:1px solid #232540;border-radius:4px;padding:14px 9px 9px;background:rgba(26,27,38,.55);min-width:0;}
+.p-acc{border-color:#7c5cff;}
+.p-lab{position:absolute;top:-7px;left:7px;padding:0 5px;background:#15151f;font-size:11px;color:#7aa2f7;letter-spacing:.06em;}
+.p-acc .p-lab{color:#bb9af7;}
+.p-met{position:absolute;top:-7px;right:7px;padding:0 5px;background:#15151f;font-size:11px;color:#565f89;}
+.scroll{overflow-y:auto;scrollbar-width:thin;scrollbar-color:#3b4261 transparent;padding-right:3px;}
+.scroll::-webkit-scrollbar{width:5px;}
+.scroll::-webkit-scrollbar-track{background:transparent;}
+.scroll::-webkit-scrollbar-thumb{background:#3b4261;border-radius:2px;}
+.scroll::-webkit-scrollbar-thumb:hover{background:#565f89;}
+.sect-hd{font-size:11px;color:#565f89;letter-spacing:.05em;margin:8px 0 3px;padding-top:7px;border-top:1px dotted #1f2335;display:flex;align-items:center;gap:6px;}
+.sect-hd:first-child{margin-top:0;padding-top:0;border-top:0;}
+.sect-hd .ct{margin-left:auto;font-size:11px;color:#3b4261;}
+.fe{font-size:11px;}
+.fl{display:flex;align-items:center;gap:5px;padding:1.5px 3px;line-height:1.45;border-radius:2px;white-space:nowrap;overflow:hidden;}
+.fl .ind{color:#2a2e44;flex-shrink:0;}
+.fl .fd{color:#7aa2f7;}
+.fl .fn{color:#a9b1d6;flex:1;overflow:hidden;text-overflow:ellipsis;}
+.fl.act{background:rgba(247,118,142,.08);}
+.fl.act .fn{color:#f7768e;}
+.fl .m{color:#e0af68;flex-shrink:0;width:9px;text-align:center;display:inline-block;}
+.fl .a{color:#9ece6a;flex-shrink:0;width:9px;text-align:center;display:inline-block;}
+.fl .stats{color:#565f89;font-size:11px;flex-shrink:0;}
+.fl-mod .fn{color:#c0caf5;}
+.hint{font-size:11px;color:#565f89;padding-top:7px;margin-top:6px;border-top:1px dotted #1f2335;display:flex;gap:9px;flex-wrap:wrap;}
+.hint .k{color:#bb9af7;}
+.hint .sp{color:#2a2e44;}
+.pmeta{display:flex;align-items:center;gap:8px;font-size:11px;color:#565f89;margin-bottom:7px;padding-bottom:7px;border-bottom:1px dotted #1f2335;}
+.pmeta .pn{color:#bb9af7;font-weight:500;font-variant-numeric:tabular-nums;}
+.pmeta .pb{flex:1;height:3px;background:#1f2335;border-radius:2px;overflow:hidden;}
+.pmeta .pf{height:100%;background:linear-gradient(90deg,#9ece6a,#bb9af7);}
+.tk{padding:3px 4px;font-size:11.5px;line-height:1.5;display:flex;align-items:center;gap:7px;border-radius:2px;}
+.tk.done .ic{color:#9ece6a;}
+.tk.done .nm{color:#7a8ab0;text-decoration:line-through;text-decoration-color:#3b4261;}
+.tk.pen .ic{color:#3b4261;}
+.tk.pen .nm{color:#565f89;}
+.tk .ic{flex-shrink:0;width:11px;display:inline-block;text-align:center;font-size:11px;}
+.tk .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tk .dur{color:#565f89;font-size:11px;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.tk-sm{color:#565f89;font-size:11px;padding:0 4px 4px 22px;line-height:1.4;}
+.tk-act{margin:6px 0;padding:9px 10px 10px;border:1px solid #7c5cff;border-radius:4px;background:rgba(124,92,255,.08);position:relative;overflow:hidden;}
+.tk-act::before{content:'';position:absolute;top:0;left:0;width:2px;height:100%;background:linear-gradient(180deg,#bb9af7,#7c5cff);}
+.tk-act .hd{display:flex;align-items:center;gap:7px;font-size:12px;}
+.tk-act .hd .ic{color:#bb9af7;flex-shrink:0;animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+.tk-act .hd .nm{flex:1;color:#c0caf5;font-weight:500;}
+.tk-act .hd .dur{color:#bb9af7;font-size:11px;font-variant-numeric:tabular-nums;}
+.tk-act .op{font-size:11px;color:#a9b1d6;margin-top:6px;display:flex;align-items:center;gap:5px;}
+.spin{display:inline-block;animation:rot 1s linear infinite;}
+@keyframes rot{from{transform:rotate(0);}to{transform:rotate(360deg);}}
+.tk-act .op .spin{color:#bb9af7;}
+.tk-act .op code{color:#7dcfff;font-size:11px;background:rgba(125,207,255,.07);padding:0 4px;border-radius:2px;}
+.tk-act .op em{color:#565f89;font-style:normal;}
+.tk-act .pbar{height:3px;background:#1f2335;border-radius:2px;overflow:hidden;margin:8px 0;position:relative;}
+.tk-act .pbar .pf{height:100%;background:linear-gradient(90deg,#bb9af7,#ff75a0);border-radius:2px;width:67%;}
+.tk-act .pbar::after{content:'';position:absolute;top:0;left:-50%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);animation:shim 2.5s infinite;}
+@keyframes shim{0%{left:-50%;}100%{left:120%;}}
+.sub{display:flex;align-items:center;gap:6px;font-size:11px;padding:1.5px 0 1.5px 4px;line-height:1.5;}
+.sub .ic{flex-shrink:0;width:11px;display:inline-block;text-align:center;}
+.sub.done .ic{color:#9ece6a;}
+.sub.done .nm{color:#7a8ab0;}
+.sub.act .ic{color:#bb9af7;}
+.sub.act .nm{color:#c0caf5;}
+.sub.act .nm::after{content:'▎';color:#bb9af7;animation:cur .8s step-end infinite;margin-left:1px;}
+@keyframes cur{0%,50%{opacity:1;}50.01%,100%{opacity:0;}}
+.sub.pen .ic{color:#3b4261;}
+.sub.pen .nm{color:#565f89;}
+.sub .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sub .dur{color:#3b4261;font-size:11px;font-variant-numeric:tabular-nums;}
+.nw-row{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:center;}
+.mascot{font-family:inherit;line-height:1.05;color:#ff75a0;white-space:pre;font-size:12.5px;}
+.mascot .e{animation:bl 4.5s step-end infinite;display:inline-block;}
+@keyframes bl{0%,90%,100%{opacity:1;}91%,96%{opacity:0;}}
+.m-wrap{animation:bob 3.5s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-2px);}}
+.nw-info{font-size:11px;}
+.nw-info .op{color:#bb9af7;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;}
+.nw-info .op .spin{color:#bb9af7;}
+.nw-info .meta{color:#565f89;margin-top:3px;}
+.nw-info .det{color:#9aa5ce;margin-top:6px;font-size:11px;line-height:1.5;display:flex;gap:9px;flex-wrap:wrap;}
+.nw-info .det .g{color:#9ece6a;}
+.nw-info .det .pp{color:#bb9af7;}
+.diff .h{color:#565f89;font-size:11px;font-style:italic;padding:2px 0 3px;}
+.dl{display:flex;gap:5px;font-size:11px;line-height:1.55;padding:0 3px;min-width:0;border-radius:1px;}
+.dl .n{color:#3b4261;min-width:18px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.dl .c{flex:1;min-width:0;white-space:pre;overflow:hidden;text-overflow:ellipsis;}
+.dl.add{background:rgba(158,206,106,.07);}
+.dl.add .c{color:#9ece6a;}
+.dl.rem{background:rgba(247,118,142,.08);}
+.dl.rem .c{color:#f7768e;}
+.dl.ctx .c{color:#9aa5ce;}
+.sr{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:1.5px 0;}
+.sr .lab{color:#565f89;}
+.sr .v{color:#c0caf5;font-weight:500;}
+.bar{height:3px;background:#1f2335;border-radius:2px;overflow:hidden;margin:4px 0 1px;position:relative;}
+.bf{height:100%;border-radius:2px;}
+.bf.gr{background:linear-gradient(90deg,#9ece6a 0%,#e0af68 60%,#f7768e 100%);}
+.bar.shim::after{content:'';position:absolute;top:0;left:-50%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:shim 2.6s infinite;}
+.usage-divider{height:1px;background:#1f2335;margin:7px -2px 6px;}
+.is-row{display:flex;align-items:center;gap:6px;font-size:11px;padding:1.5px 0;}
+.is-row .id{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.is-row .id.e{background:#3b4261;}
+.is-row .id.w{background:#e0af68;}
+.is-row .id.s{background:#9ece6a;animation:pd 2s infinite;}
+.is-row .lab{color:#a9b1d6;flex:1;font-size:11px;}
+.is-row .v{color:#c0caf5;font-variant-numeric:tabular-nums;font-size:11px;}
+.sv{display:flex;align-items:center;gap:6px;font-size:11px;padding:1.5px 0;min-width:0;}
+.sd{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.sd.on{background:#9ece6a;animation:pd 2s infinite;}
+.sd.bs{background:#e0af68;animation:pd 1.1s infinite;}
+.sd.of{background:#3b4261;}
+.sv .nm{color:#c0caf5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:11px;}
+.sv .ct{color:#565f89;font-size:11px;flex-shrink:0;}
+.sv-hd{font-size:11px;color:#565f89;letter-spacing:.04em;margin:7px 0 2px;padding-top:6px;border-top:1px dotted #1f2335;}
+.sv-hd:first-child{margin-top:0;padding-top:0;border-top:0;}
+.imgs{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;}
+.th{aspect-ratio:1;border:1px solid #2a2e44;border-radius:2px;overflow:hidden;cursor:pointer;}
+.th svg{width:100%;height:100%;display:block;}
+.nt{margin-top:9px;border:1px solid #7c5cff;background:rgba(187,154,247,.08);border-radius:4px;padding:9px 12px 9px 14px;display:flex;align-items:center;gap:10px;animation:slIn .6s ease-out;position:relative;overflow:hidden;}
+@keyframes slIn{from{transform:translateY(8px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.nt::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:#bb9af7;animation:nfb 1.8s ease-in-out infinite;}
+@keyframes nfb{0%,100%{opacity:.6;}50%{opacity:1;}}
+.nt .ic{color:#bb9af7;font-size:14px;flex-shrink:0;animation:bob 2s ease-in-out infinite;}
+.nt .tx{flex:1;color:#c0caf5;font-size:11.5px;overflow:hidden;}
+.nt .tx code{background:rgba(224,175,104,.1);color:#e0af68;padding:0 4px;border-radius:2px;font-size:11px;}
+.nt .tx code.path{background:rgba(125,207,255,.1);color:#7dcfff;}
+.nt .tx .who{color:#ff75a0;font-weight:500;}
+.nt .ax{display:flex;gap:4px;flex-shrink:0;}
+.kb{display:inline-block;padding:1px 6px;border:1px solid #3b4261;border-radius:2px;background:#1a1b26;color:#c0caf5;font-size:11px;}
+.sb{display:flex;gap:13px;padding-top:9px;margin-top:9px;border-top:1px dashed #232540;font-size:11px;color:#565f89;align-items:center;flex-wrap:wrap;}
+.sb .k{color:#bb9af7;}
+.sb .sp{color:#2a2e44;}
+.sb .right{margin-left:auto;display:flex;gap:11px;align-items:center;}
+.sb .right b{color:#9ece6a;font-weight:500;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+</style>
+
+<h2 class="sr-only">Mockup of Clyde, a TUI companion for Claude Code, showing a file explorer with modified files, a mascot status panel, scrollable task list with progress and substeps, scrollable live diff, telemetry, services, recent images, and a permission notification from Claude.</h2>
+
+<div class="cc">
+  <div class="cc-tb">
+    <span class="cc-name">clyde</span>
+    <span class="b">·</span>
+    <span class="path">~/projects/<b>claude-companion</b></span>
+    <span class="meta">
+      <span class="it"><span class="live"></span><b style="color:#9ece6a;">claude · live</b></span>
+      <span class="it">1h 24m</span>
+      <span class="it"><b style="color:#7aa2f7;">47k</b> tok</span>
+      <span class="it"><b>$1.42</b></span>
+    </span>
+  </div>
+
+  <div class="cc-grid">
+    <!-- LEFT: FILE EXPLORER -->
+    <div class="cc-col">
+      <div class="p">
+        <span class="p-lab">explorer</span>
+        <span class="p-met">31</span>
+        <div class="scroll fe" style="max-height:455px;">
+          <div class="sect-hd">modified <span class="ct">4</span></div>
+          <div class="fl fl-mod"><span class="m">M</span><span class="fn">api/auth.ts</span><span class="stats">+14 −3</span></div>
+          <div class="fl fl-mod"><span class="m">M</span><span class="fn">ui/Sidebar.tsx</span><span class="stats">+28 −12</span></div>
+          <div class="fl fl-mod"><span class="a">+</span><span class="fn">ui/Mascot.tsx</span><span class="stats">+47</span></div>
+          <div class="fl fl-mod"><span class="m">M</span><span class="fn">package.json</span><span class="stats">+2</span></div>
+
+          <div class="sect-hd">tree</div>
+          <div class="fl"><span class="fd">▼ src</span></div>
+          <div class="fl"><span class="ind">│ </span><span class="fd">▼ ui</span></div>
+          <div class="fl"><span class="ind">│ │ </span><span class="m">M</span><span class="fn">Sidebar.tsx</span></div>
+          <div class="fl"><span class="ind">│ │ </span><span class="a">+</span><span class="fn">Mascot.tsx</span></div>
+          <div class="fl"><span class="ind">│ │ </span>  <span class="fn">Header.tsx</span></div>
+          <div class="fl"><span class="ind">│ │ </span>  <span class="fn">Button.tsx</span></div>
+          <div class="fl"><span class="ind">│ </span><span class="fd">▼ api</span></div>
+          <div class="fl act"><span class="ind">│ │ </span>  <span class="fn">▸ auth.ts</span></div>
+          <div class="fl"><span class="ind">│ │ </span>  <span class="fn">routes.ts</span></div>
+          <div class="fl"><span class="ind">│ │ </span>  <span class="fn">middleware.ts</span></div>
+          <div class="fl"><span class="ind">│ </span>  <span class="fn">index.ts</span></div>
+          <div class="fl"><span class="ind">│ </span>  <span class="fn">App.tsx</span></div>
+          <div class="fl"><span class="fd">▼ tests</span></div>
+          <div class="fl"><span class="ind">│ </span>  <span class="fn">auth.test.ts</span></div>
+          <div class="fl"><span class="ind">│ </span>  <span class="fn">routes.test.ts</span></div>
+          <div class="fl"><span class="fd">▶ public</span></div>
+          <div class="fl">  <span class="fn">README.md</span></div>
+          <div class="fl"><span class="m">M</span><span class="fn">package.json</span></div>
+          <div class="fl">  <span class="fn">tsconfig.json</span></div>
+          <div class="fl">  <span class="fn">.gitignore</span></div>
+          <div class="fl">  <span class="fn">vite.config.ts</span></div>
+        </div>
+        <div class="hint">
+          <span><span class="k">↵</span> open</span>
+          <span class="sp">·</span>
+          <span><span class="k">⌘e</span> edit</span>
+          <span class="sp">·</span>
+          <span><span class="k">/</span> find</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE: MASCOT + TASKS + DIFF -->
+    <div class="cc-col">
+      <div class="p p-acc">
+        <span class="p-lab">now</span>
+        <span class="p-met" style="color:#bb9af7;">writing · 47 t/s</span>
+        <div class="nw-row">
+          <div class="m-wrap"><div class="mascot">╭─────╮
+│<span class="e">◉</span> ω <span class="e">◉</span>│
+│ ‿‿‿ │
+╰─────╯</div></div>
+          <div class="nw-info">
+            <div class="op"><span class="spin">◐</span>edit auth.ts</div>
+            <div class="meta">14 lines staged · line 46</div>
+            <div class="det"><span><span class="g">●</span> ts</span><span><span class="g">●</span> lint</span><span><span class="pp">▸</span> compile</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p">
+        <span class="p-lab">tasks</span>
+        <span class="p-met">3 of 7 · 0:42</span>
+        <div class="pmeta">
+          <span class="pn">43%</span>
+          <div class="pb"><div class="pf" style="width:43%;"></div></div>
+          <span>4 left</span>
+        </div>
+        <div class="scroll" style="max-height:215px;">
+          <div class="tk done"><span class="ic">✓</span><span class="nm">Review auth.ts structure</span><span class="dur">12s</span></div>
+          <div class="tk-sm">read 248 lines · 4 functions</div>
+          <div class="tk done"><span class="ic">✓</span><span class="nm">Run failing tests</span><span class="dur">4s</span></div>
+          <div class="tk-sm">3 of 18 failed in auth.test.ts</div>
+          <div class="tk done"><span class="ic">✓</span><span class="nm">Identify token bug</span><span class="dur">28s</span></div>
+          <div class="tk-sm">expired tokens crash verifyToken</div>
+
+          <div class="tk-act">
+            <div class="hd">
+              <span class="ic">▸</span>
+              <span class="nm">Refactor authenticate()</span>
+              <span class="dur">0:42</span>
+            </div>
+            <div class="op"><span class="spin">◐</span>editing <code>auth.ts</code> <em>· line 46</em></div>
+            <div class="pbar"><div class="pf"></div></div>
+            <div class="subs">
+              <div class="sub done"><span class="ic">✓</span><span class="nm">verify signature flow</span><span class="dur">0:08</span></div>
+              <div class="sub done"><span class="ic">✓</span><span class="nm">update return type</span><span class="dur">0:12</span></div>
+              <div class="sub act"><span class="ic">▸</span><span class="nm">handle expired tokens</span><span class="dur">0:04</span></div>
+              <div class="sub pen"><span class="ic">○</span><span class="nm">add error responses</span></div>
+            </div>
+          </div>
+
+          <div class="tk pen"><span class="ic">□</span><span class="nm">Update auth.test.ts</span></div>
+          <div class="tk pen"><span class="ic">□</span><span class="nm">Run typecheck & lint</span></div>
+          <div class="tk pen"><span class="ic">□</span><span class="nm">Update CHANGELOG.md</span></div>
+        </div>
+      </div>
+
+      <div class="p">
+        <span class="p-lab">live diff</span>
+        <span class="p-met">auth.ts · +14 −3</span>
+        <div class="scroll" style="max-height:155px;">
+          <div class="diff">
+            <div class="h">@@ −42,7 +42,18 @@ authenticate(token)</div>
+            <div class="dl ctx"><span class="n">42</span><span class="c">  if (!token) {</span></div>
+            <div class="dl rem"><span class="n">43</span><span class="c">−   throw new Error('no token');</span></div>
+            <div class="dl add"><span class="n">43</span><span class="c">+   return { ok: false, reason: 'missing' };</span></div>
+            <div class="dl ctx"><span class="n">44</span><span class="c">  }</span></div>
+            <div class="dl add"><span class="n">45</span><span class="c">+ const decoded = await verify(token);</span></div>
+            <div class="dl add"><span class="n">46</span><span class="c">+ if (!decoded?.sub) {</span></div>
+            <div class="dl add"><span class="n">47</span><span class="c">+   return { ok: false, reason: 'expired' };</span></div>
+            <div class="dl add"><span class="n">48</span><span class="c">+ }</span></div>
+            <div class="dl ctx"><span class="n">49</span><span class="c">  return { ok: true, user: decoded };</span></div>
+            <div class="dl ctx"><span class="n">50</span><span class="c">}</span></div>
+            <div class="h">@@ −67,4 +78,8 @@ refreshToken()</div>
+            <div class="dl ctx"><span class="n">78</span><span class="c">  const stored = await db.get(uid);</span></div>
+            <div class="dl add"><span class="n">79</span><span class="c">+ if (!stored?.refreshExp) return null;</span></div>
+            <div class="dl add"><span class="n">80</span><span class="c">+ if (stored.refreshExp &lt; now()) {</span></div>
+            <div class="dl add"><span class="n">81</span><span class="c">+   await db.del(uid);</span></div>
+            <div class="dl add"><span class="n">82</span><span class="c">+   return null;</span></div>
+            <div class="dl add"><span class="n">83</span><span class="c">+ }</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: USAGE + SERVERS + IMAGES -->
+    <div class="cc-col">
+      <div class="p">
+        <span class="p-lab">usage</span>
+        <div class="sr"><span class="lab">tokens</span><span class="v">47.2k</span></div>
+        <div class="bar shim"><div class="bf gr" style="width:23%;"></div></div>
+        <div style="font-size:11px;color:#565f89;text-align:right;">23% · 200k</div>
+        <div style="height:5px;"></div>
+        <div class="sr"><span class="lab">cost</span><span class="v">$1.42</span></div>
+        <div class="sr"><span class="lab">turns</span><span class="v">38</span></div>
+        <div class="sr"><span class="lab">model</span><span class="v" style="color:#bb9af7;font-size:11px;">opus 4.7</span></div>
+        <div class="usage-divider"></div>
+        <div class="is-row"><span class="id e"></span><span class="lab">errors</span><span class="v">0</span></div>
+        <div class="is-row"><span class="id w"></span><span class="lab">warnings</span><span class="v">2</span></div>
+        <div class="is-row"><span class="id s"></span><span class="lab">tests</span><span class="v">18 / 18</span></div>
+      </div>
+
+      <div class="p">
+        <span class="p-lab">servers</span>
+        <span class="p-met">5 / 7</span>
+        <div class="sv-hd">mcps · 3 / 4</div>
+        <div class="sv"><span class="sd on"></span><span class="nm">filesystem</span><span class="ct">12</span></div>
+        <div class="sv"><span class="sd on"></span><span class="nm">github</span><span class="ct">8</span></div>
+        <div class="sv"><span class="sd on"></span><span class="nm">memory</span><span class="ct">3</span></div>
+        <div class="sv"><span class="sd of"></span><span class="nm" style="color:#565f89;">playwright</span></div>
+        <div class="sv-hd">lsps · 2 / 3</div>
+        <div class="sv"><span class="sd on"></span><span class="nm">tsserver</span></div>
+        <div class="sv"><span class="sd on"></span><span class="nm">rust-analyzer</span></div>
+        <div class="sv"><span class="sd bs"></span><span class="nm">pylsp</span></div>
+      </div>
+
+      <div class="p">
+        <span class="p-lab">images</span>
+        <span class="p-met">4</span>
+        <div class="imgs">
+          <div class="th"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#1f2335"/><circle cx="13" cy="13" r="5" fill="#e0af68"/><path d="M0 32 L14 22 L24 28 L40 18 L40 40 L0 40 Z" fill="#7aa2f7" opacity=".75"/></svg></div>
+          <div class="th"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#1a1b26"/><rect x="5" y="22" width="4" height="14" fill="#7dcfff"/><rect x="12" y="14" width="4" height="22" fill="#bb9af7"/><rect x="19" y="18" width="4" height="18" fill="#9ece6a"/><rect x="26" y="8" width="4" height="28" fill="#ff75a0"/><rect x="33" y="12" width="4" height="24" fill="#e0af68"/></svg></div>
+          <div class="th"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#1f2335"/><path d="M0 30 Q10 20 20 26 T40 22 L40 40 L0 40 Z" fill="#7c5cff" opacity=".7"/><circle cx="30" cy="11" r="3" fill="#e0af68"/></svg></div>
+          <div class="th"><svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#1a1b26"/><rect x="5" y="6" width="30" height="22" fill="none" stroke="#7aa2f7" stroke-width="1"/><rect x="5" y="6" width="30" height="3" fill="#7aa2f7"/><line x1="9" y1="14" x2="30" y2="14" stroke="#565f89"/><line x1="9" y1="18" x2="24" y2="18" stroke="#565f89"/><line x1="9" y1="22" x2="27" y2="22" stroke="#565f89"/></svg></div>
+        </div>
+        <div class="hint" style="border:0;padding-top:6px;margin-top:5px;justify-content:space-between;">
+          <span><span class="k">↵</span> view full</span>
+          <span style="color:#565f89;">2m ago</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nt">
+    <span class="ic">◆</span>
+    <span class="tx"><span class="who">claude</span> wants to run <code>npm test</code> in <code class="path">~/projects/claude-companion</code></span>
+    <div class="ax"><span class="kb">y</span><span class="kb">n</span><span class="kb">esc</span></div>
+  </div>
+
+  <div class="sb">
+    <span><span class="k">⌃k</span> palette</span>
+    <span class="sp">·</span>
+    <span><span class="k">⌃e</span> explorer</span>
+    <span class="sp">·</span>
+    <span><span class="k">⌃t</span> tasks</span>
+    <span class="sp">·</span>
+    <span><span class="k">⌃d</span> diff</span>
+    <span class="sp">·</span>
+    <span><span class="k">tab</span> focus</span>
+    <span class="right">
+      <span>v0.4.2</span>
+      <span class="sp">·</span>
+      <span>↵ <b>ready</b></span>
+    </span>
+  </div>
+</div>

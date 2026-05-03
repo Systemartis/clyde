@@ -1,0 +1,61 @@
+name: Bug Report
+description: Create a report to help us improve
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! 
+        **Note:** If you've found a security vulnerability, please do NOT open a public issue. See our [SECURITY.md](../SECURITY.md) for reporting instructions.
+  - type: input
+    id: version
+    attributes:
+      label: Clyde Version
+      description: What version of Clyde are you using? (Run `clyde --version`)
+      placeholder: e.g. 0.1.0 or latest main
+    validations:
+      required: true
+  - type: input
+    id: claude_version
+    attributes:
+      label: Claude Code Version
+      description: What version of Claude Code are you using?
+      placeholder: e.g. 0.2.29
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this issue?
+      value: |
+        1. Run '...'
+        2. Press '...'
+        3. See error
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating System and Terminal
+      description: What OS and terminal emulator are you using?
+      placeholder: e.g., macOS with iTerm2, Linux with Alacritty
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs, output, or screencast
+      description: |
+        Please paste any relevant logs, errors, or stack traces.
+        A short screencast (asciinema or VHS) is gold for debugging TUI issues!
+      render: shell

@@ -1,0 +1,81 @@
+schema: spec-driven
+
+context: |
+  Project: clyde — Claude's best friend (TUI companion for Claude Code).
+  Scope: per-project, single binary. Reads ~/.claude/projects/<encoded-cwd>/*.jsonl
+  for all sessions in this project + ~/.claude/todos/*.json + .git/.
+  Stack: Go 1.26.2 + Bubble Tea v2 (greenfield; go.mod created in first /sdd-new).
+  Architecture: Hexagonal + DDD — domain / application / ports / adapters / cmd.
+  Domain language: Session, Turn, Event, ToolCall, Subagent, Usage, Project, Todo.
+  Testing: go test (built-in) + teatest for TUI snapshots.
+  Quality: gofmt + go vet + golangci-lint v2.11.4 (depguard enforces hexagonal layer rules).
+
+strict_tdd: true
+
+testing:
+  test_runner:
+    framework: "go test (built-in)"
+    command: "go test ./..."
+  layers:
+    unit:
+      available: true
+      tool: "go test"
+    integration:
+      available: true
+      tool: "net/http/httptest (built-in); t.TempDir() for fsnotify-driven adapters"
+    e2e:
+      available: true
+      tool: "teatest (charmbracelet/x/exp/teatest) — added in first change"
+  coverage:
+    available: true
+    command: "go test -cover ./..."
+  quality:
+    linter:
+      available: true
+      command: "golangci-lint run ./..."
+      config: ".golangci.yml"
+      enforces:
+        - "hexagonal layering via depguard (domain pure, application via ports, ports no adapters)"
+        - "errcheck, staticcheck, gocritic, revive, gocyclo, gocognit, bodyclose, noctx, dupl, misspell, etc."
+    type_checker:
+      available: true
+      command: "go vet ./..."
+    formatter:
+      available: true
+      command: "gofmt -l ."
+      additional: "goimports (via golangci-lint formatters block)"
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages (domain, application, ports, adapters, cmd)
+    - State which domain concepts (Session/Turn/Event/etc.) the change touches
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Express invariants in domain language; never leak adapter terms (JSONL, fsnotify) into spec text
+  design:
+    - Identify ports (interfaces) and their adapters before writing code
+    - Document architecture decisions (ADRs) with rationale
+    - Include sequence diagrams for cross-layer flows (e.g. JSONL event → domain → view model)
+    - Be explicit about WHERE hexagonal is worth it vs. where it's overkill
+  tasks:
+    - Group tasks by phase (infrastructure, domain, application, adapters, tui, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+    - In domain/application tasks, the failing test MUST come before the implementation task
+  apply:
+    - Strict TDD: write failing test → implement → green → refactor
+    - Follow hexagonal layering — domain imports nothing outside stdlib + own packages
+    - Pure value objects in domain with methods (e.g. Usage.Add), not anemic structs + service classes
+    - Use teatest for TUI snapshots; table-driven tests for domain logic
+    - Conventional commits, no AI co-author tags (per global ~/.claude/CLAUDE.md)
+  verify:
+    - Run `go test ./...` and confirm zero failures
+    - Run `go vet ./...` and `gofmt -l .` (no diff expected)
+    - Run `golangci-lint run ./...` and confirm zero issues (depguard MUST pass — hexagonal layering)
+    - Compare implementation against every spec scenario (Given/When/Then)
+  archive:
+    - Sync delta specs to openspec/specs/
+    - Save a milestone summary to engram via mem_save (per user preference: engram at big milestones only)
+    - Warn before merging destructive deltas (large removals)

@@ -1,0 +1,18 @@
+# Local build artefacts (built via `go install` / `go build ./cmd/clyde`).
+/clyde
+*.test
+*.out
+
+# Editor / OS noise.
+.DS_Store
+.idea/
+.vscode/
+
+# Coverage reports.
+coverage.out
+coverage.html
+
+# Internal-only design + spec docs and the agent skill registry
+docs/
+openspec/
+.atl/
