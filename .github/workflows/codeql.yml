@@ -26,6 +26,11 @@ env:
 jobs:
   analyze:
     name: analyze (go)
+    # CodeQL SARIF upload requires GitHub Advanced Security, which is free
+    # for public repos only. Skip on private repos so the check doesn't
+    # turn the rest of CI red — the workflow auto-enables when the repo
+    # is flipped public.
+    if: github.event.repository.private == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
