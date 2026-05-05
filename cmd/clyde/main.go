@@ -159,6 +159,15 @@ func run() int {
 					fmt.Fprintf(os.Stderr, "clyde: hook server unavailable: %v (continuing without hooks)\n", err)
 				} else {
 					go func() {
+						// Recover from any panic in the hook-handling path.
+						// A panic here shouldn't take down the TUI — we keep
+						// the rest of clyde running and just lose hooks.
+						defer func() {
+							if r := recover(); r != nil {
+								fmt.Fprintf(os.Stderr,
+									"clyde: hook server panicked: %v (continuing without hooks)\n", r)
+							}
+						}()
 						if serveErr := hs.Start(hookCtx); serveErr != nil {
 							fmt.Fprintf(os.Stderr, "clyde: hook server error: %v\n", serveErr)
 						}
