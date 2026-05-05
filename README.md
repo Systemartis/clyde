@@ -1,5 +1,10 @@
 # Clyde
 
+[![CI](https://github.com/Systemartis/clyde/actions/workflows/ci.yml/badge.svg)](https://github.com/Systemartis/clyde/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Systemartis/clyde)](https://goreportcard.com/report/github.com/Systemartis/clyde)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Systemartis/clyde.svg)](https://pkg.go.dev/github.com/Systemartis/clyde)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 > Claude's best friend.
 
 A terminal companion for Claude Code. Tile it next to your `claude` pane in tmux/cmux/Ghostty and see live sessions, tool activity, token usage, todos, subagents, and project state — all without leaving the terminal.
@@ -102,3 +107,15 @@ gofmt -l .                    # formatting (no diff = clean)
 golangci-lint run ./...       # lint + hexagonal layer enforcement
 go build ./cmd/clyde          # local build
 ```
+
+## Security
+
+Found a vulnerability? Please **don't** open a public issue. See [SECURITY.md](SECURITY.md) for the disclosure process and trust model. Each tagged release ships SPDX SBOMs and a keyless cosign signature over `checksums.txt` — verify before running.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the local-dev setup, the strict-TDD requirement, and the conventional-commits + branch-naming rules.
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
