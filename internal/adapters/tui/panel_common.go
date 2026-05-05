@@ -267,8 +267,13 @@ func wrapPanelCollapsed(s Styles, label, summary, meta string, width int, focuse
 		metaRend = s.PanelMeta.Render(" " + meta + " ")
 	}
 
-	// Calculate fills
+	// Calculate fills. innerW must be ≥ 0 — strings.Repeat panics on a
+	// negative count, and a 0-width terminal (CI pty without TIOCSWINSZ)
+	// would otherwise produce innerW = -2 and crash View().
 	innerW := width - 2
+	if innerW < 0 {
+		innerW = 0
+	}
 	usedW := 1 + // space before chevron
 		ansiWidth(chevStr) +
 		ansiWidth(" "+label+": ") +
