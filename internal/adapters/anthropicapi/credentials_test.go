@@ -203,3 +203,48 @@ func TestSaveCredentials_WritesValidJSON(t *testing.T) {
 		t.Errorf("leftover tmp file after SaveCredentials: stat err = %v (want IsNotExist)", err)
 	}
 }
+
+func TestTruncateBytes(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		in   string
+		n    int
+		want string
+	}{
+		{"under cap", "short", 100, "short"},
+		{"at cap", "exact", 5, "exact"},
+		{"over cap", "abcdefgh", 4, "abcd…"},
+		{"empty", "", 10, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := truncateBytes([]byte(tc.in), tc.n)
+			if got != tc.want {
+				t.Errorf("truncateBytes(%q, %d) = %q, want %q", tc.in, tc.n, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsKeychainItemNotFound(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		stderr string
+		want   bool
+	}{
+		{"", true},
+		{"security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain.", true},
+		{"errSecItemNotFound", true},
+		{"could not be found", true},
+		{"User interaction is not allowed.", false},
+		{"unrelated error message", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.stderr, func(t *testing.T) {
+			if got := isKeychainItemNotFound(tc.stderr); got != tc.want {
+				t.Errorf("isKeychainItemNotFound(%q) = %v, want %v", tc.stderr, got, tc.want)
+			}
+		})
+	}
+}
