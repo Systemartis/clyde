@@ -12,15 +12,38 @@ Built spec-first using **SDD** (Spec-Driven Development), **DDD**, and **Hexagon
 
 ## Install
 
+### Pre-built binaries (recommended)
+
+Each release ships a `tar.gz` for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` plus a `checksums.txt`.
+
 ```sh
-git clone <this-repo> clyde
-cd clyde
-go install ./cmd/clyde
+# Replace VERSION + OS/ARCH for your platform; check the assets list at
+# https://github.com/Systemartis/clyde/releases for the exact filenames.
+VERSION=0.1.0
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSL "https://github.com/Systemartis/clyde/releases/download/v${VERSION}/clyde_${VERSION}_${OS}_${ARCH}.tar.gz" \
+  | tar -xz -C /tmp clyde
+install -m 0755 /tmp/clyde "$HOME/.local/bin/clyde"   # or anywhere on $PATH
+clyde --version
 ```
 
-`go install` puts the binary at `$(go env GOPATH)/bin/clyde` (typically `~/go/bin/clyde`).
+Verify the checksum before running an unfamiliar binary:
 
-If `~/go/bin` is in your `$PATH`, you're done. Otherwise either:
+```sh
+curl -fsSL "https://github.com/Systemartis/clyde/releases/download/v${VERSION}/checksums.txt" -o /tmp/clyde-checksums.txt
+( cd /tmp && sha256sum -c clyde-checksums.txt --ignore-missing )
+```
+
+### Build from source (`go install`)
+
+Requires Go 1.26+:
+
+```sh
+go install github.com/Systemartis/clyde/cmd/clyde@latest
+```
+
+The binary lands at `$(go env GOPATH)/bin/clyde` (typically `~/go/bin/clyde`). If `~/go/bin` is on your `$PATH`, you're done. Otherwise:
 
 ```sh
 # Option 1 — add ~/go/bin to PATH permanently (zsh)
@@ -30,7 +53,7 @@ echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc
 ln -sf "$(go env GOPATH)/bin/clyde" ~/.local/bin/clyde
 ```
 
-Verify with `which clyde`.
+Verify with `which clyde && clyde --version`.
 
 ## Usage
 

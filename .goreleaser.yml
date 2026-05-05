@@ -81,3 +81,21 @@ release:
   footer: |
     ---
     **Verify**: `sha256sum -c checksums.txt`
+
+# Homebrew tap publishing. Disabled until the tap repo
+# (Systemartis/homebrew-tap) exists and a HOMEBREW_TAP_GITHUB_TOKEN
+# secret is provisioned with write access to it. Uncomment to enable
+# `brew install Systemartis/tap/clyde` for users.
+#
+# brews:
+#   - name: clyde
+#     repository:
+#       owner: Systemartis
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#     directory: Formula
+#     homepage: https://github.com/Systemartis/clyde
+#     description: Terminal companion TUI for Claude Code
+#     license: Apache-2.0
+#     test: |
+#       system "#{bin}/clyde", "--version"
