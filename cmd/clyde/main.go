@@ -31,6 +31,7 @@ import (
 	"github.com/Systemartis/clyde/internal/adapters/tui"
 	"github.com/Systemartis/clyde/internal/application/livesession"
 	"github.com/Systemartis/clyde/internal/domain/project"
+	"github.com/Systemartis/clyde/internal/version"
 )
 
 func main() {
@@ -41,11 +42,26 @@ func run() int {
 	var layoutFlag string
 	var demoFlag bool
 	var sourceFlag string
+	var versionFlag bool
 
 	flag.StringVar(&layoutFlag, "layout", "", "layout mode override: stack, tabs, multi-col")
 	flag.BoolVar(&demoFlag, "demo", false, "use mock data instead of live Claude Code data")
 	flag.StringVar(&sourceFlag, "source", "claude", "LLM source adapter: claude (default; gemini/codex/kimi are V21+)")
+	flag.BoolVar(&versionFlag, "version", false, "print version and exit")
 	flag.Parse()
+
+	if versionFlag {
+		info := version.Info()
+		fmt.Printf("clyde %s\n", info.Version)
+		if info.Commit != "" {
+			fmt.Printf("commit: %s\n", info.Commit)
+		}
+		if info.Date != "" {
+			fmt.Printf("built:  %s\n", info.Date)
+		}
+		fmt.Printf("go:     %s\n", info.GoVersion)
+		return 0
+	}
 
 	// Validate source flag — only "claude" is implemented; warn on others.
 	switch sourceFlag {
