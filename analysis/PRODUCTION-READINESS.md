@@ -179,17 +179,26 @@ These were strong candidates but either overlap with installed skills, are too n
 - `monitoring-guidelines` (mindrally) — production-service SLOs/probes don't apply to a single-user TUI.
 - `sentry-cli` — auto-collects argv/env/host data, violates clyde's privacy stance.
 
-### 3.4 Real gaps in the skills.sh catalog
+### 3.4 Honest assessment: gaps in skills.sh
 
-Honest assessment from the eight catalog agents:
+8 catalog agents converged on the same blind spots. A wave-3 verification agent re-checked each gap against the live skills.sh leaderboard (259 skills) and `site:skills.sh` Google index — all 10 gaps confirmed, no missed installs. Where skills.sh has nothing, we reference upstream docs in the plan.
 
-- **No goreleaser skill.** No skill wraps goreleaser, semantic-release, or release-please. Authoritative source is `goreleaser.com` directly.
-- **No SBOM / sigstore / SLSA skill.** No skill on the directory teaches `syft`, `cyclonedx-gomod`, cosign keyless OIDC signing, or `actions/attest-build-provenance`.
-- **No GitHub Actions hardening skill.** No skill teaches SHA pinning, `persist-credentials: false`, zizmor scanning, OIDC trust policies. Closest is `openai/security-ownership-map` (CODEOWNERS lens only).
-- **No `slog` / `log/slog` / Go-specific structured-logging skill.** All observability skills are language-agnostic; the boristane skill is the closest fit.
-- **No Bubble Tea / TUI testing skill.** No skill addresses TUI-specific testing patterns (teatest snapshots, terminal-state corruption, ANSI-aware diffing).
+| Topic | Best skills.sh hit | Authoritative source |
+|-------|--------------------|----------------------|
+| goreleaser | (none) | [goreleaser.com](https://goreleaser.com) |
+| SBOM (CycloneDX/SPDX) | (none, only OWASP A06 mention) | `cyclonedx-gomod`, `syft` |
+| cosign keyless signing | (none) | [sigstore.dev](https://sigstore.dev) |
+| SLSA provenance | (none) | `actions/attest-build-provenance` |
+| GitHub Actions hardening | `openai/security-ownership-map` (CODEOWNERS only) | OpenSSF Scorecard, `zizmor` |
+| Go `log/slog` | `boristane/logging-best-practices` (language-agnostic) | [pkg.go.dev/log/slog](https://pkg.go.dev/log/slog) |
+| Bubble Tea / TUI testing | (none) | `charm.land/teatest` docs |
+| Go performance / pprof | `jeffallan/golang-pro` (workflow only, no commands) | [pkg.go.dev/runtime/pprof](https://pkg.go.dev/runtime/pprof), `benchstat` |
+| Homebrew tap automation | (none) | goreleaser `brews:` block |
+| DCO / CLA enforcement | (none) | [github.com/apps/dco](https://github.com/apps/dco) |
 
-Where catalog gaps exist, the plan references upstream documentation directly (goreleaser docs, sigstore docs, OpenSSF Scorecard, slog docs).
+**This isn't a flaw in our process — it's a real catalog limitation worth documenting.** The Go OSS supply-chain story lives outside skills.sh today; the plan tasks pin authoritative URLs for each missing skill.
+
+**Verification method (wave 3):** The agent fetched the skills.sh leaderboard 18× across query variations (`goreleaser`, `sbom`, `cyclonedx`, `cosign`, `sigstore`, `slsa`, `provenance`, `actions hardening`, `scorecard`, `zizmor`, `slog`, `bubble tea`, `teatest`, `pprof`, `benchstat`, `homebrew`, `dco`, `cla`) and cross-checked Google's `site:skills.sh` index. The catalog skews toward cloud platforms, frontend frameworks, marketing/SEO, and document processing — Go release engineering, supply-chain security, Actions hardening, Charm/TUI, Homebrew, and contribution governance are absent. Caveat: skills.sh's `?q=` is a client-side filter, so the verification rests on full-leaderboard scans rather than server-side search results.
 
 ---
 
