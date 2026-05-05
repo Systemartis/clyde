@@ -77,3 +77,32 @@ jobs:
 
       - name: govulncheck
         run: govulncheck ./...
+
+  fuzz:
+    name: fuzz (smoke, ~90s)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: jsonl line decoder
+        run: go test -fuzz=FuzzDecodeLineWithMsgID -fuzztime=15s ./internal/adapters/jsonl/
+
+      - name: processscan ps output
+        run: go test -fuzz=FuzzParseClaudeSessionIDs -fuzztime=15s ./internal/adapters/processscan/
+
+      - name: git status parser
+        run: go test -fuzz=FuzzParseStatus -fuzztime=15s ./internal/adapters/git/
+
+      - name: git diff parser
+        run: go test -fuzz=FuzzParseDiff -fuzztime=15s ./internal/adapters/git/
+
+      - name: anthropicapi credentials
+        run: go test -fuzz=FuzzParseCredentialsJSON -fuzztime=15s ./internal/adapters/anthropicapi/
+
+      - name: claudesettings reader
+        run: go test -fuzz=FuzzReadSettings -fuzztime=15s ./internal/adapters/claudesettings/
