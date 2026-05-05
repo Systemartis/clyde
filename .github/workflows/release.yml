@@ -1,0 +1,40 @@
+name: release
+
+# Triggered by pushing a tag like v0.1.0. The tag itself is the source of truth
+# for the version — goreleaser embeds it via ldflags into internal/version.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # required to create the GitHub release
+  packages: write   # leaves room for future container/registry pushes
+  id-token: write   # required by some attestation/signing flows (sigstore, etc.)
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  goreleaser:
+    name: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # goreleaser walks the full tag history to compute the changelog;
+          # the default shallow clone breaks that.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,83 @@
+# GoReleaser config for clyde.
+# Local snapshot:  goreleaser release --snapshot --clean
+# Release flow:    git tag v0.1.0 && git push --tags
+#
+# The ldflags below populate internal/version at build time so `clyde --version`
+# reports the real tag/commit/date instead of the runtime/debug.ReadBuildInfo()
+# fallback.
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: clyde
+    main: ./cmd/clyde
+    binary: clyde
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/Systemartis/clyde/internal/version.version={{.Version}}
+      - -X github.com/Systemartis/clyde/internal/version.commit={{.Commit}}
+      - -X github.com/Systemartis/clyde/internal/version.date={{.Date}}
+
+archives:
+  - id: clyde
+    # The v2 schema renamed `format` → `formats: [...]`. Single format is fine
+    # but must still be a list.
+    formats: [tar.gz]
+    name_template: >-
+      clyde_{{.Version}}_{{.Os}}_{{.Arch}}
+    files:
+      - README.md
+      - LICENSE
+      - CONTRIBUTING.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  # snapshot builds get an "-next" version so we never collide with a real tag.
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))?!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))?!?:.+$'
+      order: 1
+    - title: Other
+      order: 999
+
+release:
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## clyde {{.Tag}}
+
+    Terminal companion TUI for Claude Code. See README for install + usage.
+  footer: |
+    ---
+    **Verify**: `sha256sum -c checksums.txt`

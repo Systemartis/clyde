@@ -110,6 +110,36 @@ jobs:
             exit 1
           fi
 
+  goreleaser-check:
+    name: goreleaser (snapshot)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --snapshot --clean --skip=publish
+
+      - name: --version on snapshot binary
+        run: |
+          # Cross-platform-ish: pick the matching linux/amd64 build.
+          bin=$(find dist -type f -name clyde -path '*linux_amd64*' | head -1)
+          if [ -z "$bin" ]; then
+            echo "::error::no linux/amd64 snapshot binary found"
+            ls -R dist
+            exit 1
+          fi
+          "$bin" --version
+
   fuzz:
     name: fuzz (smoke, ~90s)
     runs-on: ubuntu-latest
