@@ -21,6 +21,8 @@ Clyde runs as your unprivileged user account on a single machine. The trust boun
 
 Clyde binds `127.0.0.1:<random-port>` to receive hook callbacks from `claude`. The listener is loopback-only AND requires a per-process random auth token printed to stderr at startup.
 
+When the TUI cannot drain hook events fast enough to keep the internal buffer below capacity, additional hook calls are **denied** rather than auto-approved. Users see a re-prompt in `claude` rather than a silent approval — this prevents a hung TUI or another local process from harvesting approvals the user never granted.
+
 ## Dependencies
 
 We run `govulncheck ./...` in CI on every PR and rely on a minimal set of well-maintained Go dependencies (`charm.land/*`, `BurntSushi/toml`, `alecthomas/chroma`, `aymanbagabas/go-udiff`). Direct deps are pinned in `go.mod`.

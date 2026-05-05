@@ -236,13 +236,14 @@ func (s *Server) handleHook(w http.ResponseWriter, r *http.Request) {
 		ResponseCh: make(chan HookResponse, 1),
 	}
 
-	// Deliver to consumer. If the events channel is full or closed, deny
-	// immediately rather than blocking the HTTP request indefinitely.
+	// Deliver to consumer. If the events channel is full or has no consumer,
+	// fail closed: deny the call rather than approving silently. Auto-allow
+	// would let any local process push hook calls past a hung TUI and harvest
+	// approvals the user never granted; deny forces a re-prompt instead.
 	select {
 	case s.events <- evt:
 	default:
-		// Channel full or no consumer — auto-allow so claude is not blocked.
-		writeAllow(w)
+		writeDeny(w, "clyde busy — re-run the tool to retry")
 		return
 	}
 
