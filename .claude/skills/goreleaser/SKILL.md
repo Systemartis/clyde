@@ -9,7 +9,7 @@ Authoritative skill for clyde's release pipeline. The upstream skill ships refer
 
 ## clyde's `.goreleaser.yaml` baseline
 
-Per `plans/2026-05-05-production-readiness.md` Phase 2, the config we ship is:
+Per `plans/2026-05-05-systemartis-launch.md` Phase 2, the config we ship is:
 
 ```yaml
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
@@ -83,4 +83,4 @@ If `--snapshot` succeeds locally, the tag-triggered release will too — assumin
 
 - Upstream skill: [skills.sh/aaronflorey/agent-skills/goreleaser](https://skills.sh/aaronflorey/agent-skills/goreleaser)
 - Authoritative: [goreleaser.com](https://goreleaser.com)
-- Internal: `plans/2026-05-05-production-readiness.md` Phase 2, `clyde-release-ritual` skill
+- Internal: `plans/2026-05-05-systemartis-launch.md` Phase 2, `clyde-release-ritual` skill

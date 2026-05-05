@@ -75,4 +75,4 @@ If a `chore(security):` or `fix(security):` PR lands on `main`:
 ## Sources
 - Skills used: `changelog-generator`, `gh-cli`, `dependabot-tuning`, `marcelorodrigo/conventional-commit` (spec only)
 - Authoritative refs: `goreleaser.com`, `sigstore.dev`, `slsa.dev`
-- Internal: `analysis/PRODUCTION-READINESS.md` §5 (phase ordering), `plans/2026-05-05-production-readiness.md`
+- Internal: `analysis/PRODUCTION-READINESS.md` §5 (phase ordering), `plans/2026-05-05-systemartis-launch.md`

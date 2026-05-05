@@ -216,7 +216,7 @@ Three new skills installed under `.claude/skills/` from this round:
 
 The 9 findings from `MASTER-ANALYSIS.md` (F-01..F-09) are still open and are prerequisites. This report's findings are additive — production-readiness on top of correctness. F-02 (depguard module-path drift) is reaffirmed by PR-36's grep evidence; PR-36 widens the scope to doc-comment cleanup for OSS polish.
 
-The `plans/2026-05-05-master-analysis.md` plan should ship first; this report's plan (`plans/2026-05-05-production-readiness.md`) sequences after.
+The `plans/2026-05-05-systemartis-launch.md` plan should ship first; this report's plan (`plans/2026-05-05-systemartis-launch.md`) sequences after.
 
 ---
 

@@ -276,7 +276,7 @@ These are deep modules that already do the right thing. Reference them when desi
 | F-08 | Info | S | Narrow gocyclo/gocognit exclusion to specific files |
 | F-09 | Info | L | Deepen TUI shallow modules (`keymap`, `Viewer`) |
 
-The accompanying superpowers plan (`plans/2026-05-05-master-analysis.md`) sequences these by dependency.
+The accompanying superpowers plan (`plans/2026-05-05-systemartis-launch.md`) sequences these by dependency.
 
 ---
 

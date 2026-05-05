@@ -119,4 +119,4 @@ jq '.components[].name' sbom.cdx.json | grep -c bubbletea   # spot-check known d
 - Upstream skill: [skills.sh/patricio0312rev/skills/artifact-sbom-publisher](https://skills.sh/patricio0312rev/skills/artifact-sbom-publisher)
 - Authoritative: [sigstore.dev](https://sigstore.dev), [slsa.dev](https://slsa.dev), [cyclonedx.org/specification/overview](https://cyclonedx.org), [actions/attest-build-provenance](https://github.com/actions/attest-build-provenance)
 - Adjacent: [skills.sh/jim60105/copilot-prompt/add-artifact-attestations-to-workflow](https://skills.sh/jim60105/copilot-prompt/add-artifact-attestations-to-workflow) (Docker-image attestations — not used here, kept for reference if we ever ship a container image)
-- Internal: `plans/2026-05-05-production-readiness.md` Phase 4, `clyde-release-ritual` skill
+- Internal: `plans/2026-05-05-systemartis-launch.md` Phase 4, `clyde-release-ritual` skill
