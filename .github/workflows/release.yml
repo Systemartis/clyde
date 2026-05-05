@@ -31,6 +31,12 @@ jobs:
           go-version: '1.26'
           cache: true
 
+      # syft generates SPDX SBOMs alongside the archives; cosign signs the
+      # checksum manifest with a keyless OIDC certificate. Both are picked up
+      # by goreleaser via PATH — no version pin in the config.
+      - uses: anchore/sbom-action/download-syft@v0
+      - uses: sigstore/cosign-installer@v3
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -38,3 +44,6 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required by `cosign sign-blob` keyless mode — Fulcio uses the
+          # OIDC token to issue the signing certificate.
+          COSIGN_YES: "true"

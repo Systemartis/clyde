@@ -127,7 +127,11 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --snapshot --clean --skip=publish
+          # Skip sbom + sign in snapshot — they require syft + cosign on
+          # PATH and an OIDC token that's only present in the real release
+          # workflow. The build/archive/checksum pipeline still runs, which
+          # is what we actually want to gate on.
+          args: release --snapshot --clean --skip=publish,sbom,sign
 
       - name: --version on snapshot binary
         run: |

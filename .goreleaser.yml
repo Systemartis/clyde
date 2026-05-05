@@ -47,6 +47,31 @@ checksum:
   name_template: "checksums.txt"
   algorithm: sha256
 
+# Generate SPDX SBOMs per archive using syft. Listed in the release alongside
+# the binaries — lets downstream consumers feed clyde into vulnerability
+# scanners (grype, trivy) without re-deriving the dep tree.
+sboms:
+  - id: archive
+    artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.spdx.json"
+
+# Keyless cosign signatures. Uses GitHub's OIDC token (workflow has
+# id-token: write) and the public Sigstore Rekor transparency log — no
+# private signing keys to rotate. Verify with:
+#   cosign verify-blob --certificate <cert.pem> --signature <sig> <artifact>
+signs:
+  - cmd: cosign
+    certificate: "${artifact}.pem"
+    args:
+      - "sign-blob"
+      - "--yes"
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+    artifacts: checksum
+    output: true
+
 snapshot:
   # snapshot builds get an "-next" version so we never collide with a real tag.
   version_template: "{{ incpatch .Version }}-next"
