@@ -2,8 +2,8 @@
 # The depguard rules enforce hexagonal architecture at lint-time:
 # domain stays pure, application uses ports (not adapters).
 #
-# Module path used below: github.com/vladpb/clyde
-# Confirm/change in /sdd-new bootstrap-skeleton when `go mod init` runs.
+# Module path used below: github.com/Systemartis/clyde
+# depguard rules enforce the hexagonal contract — see deny lists below.
 
 version: "2"
 
@@ -53,9 +53,9 @@ linters:
               desc: "domain is pure — no transport"
             - pkg: "os"
               desc: "domain is pure — file I/O lives in adapters"
-            - pkg: "github.com/vladpb/clyde/internal/adapters"
+            - pkg: "github.com/Systemartis/clyde/internal/adapters"
               desc: "domain must not depend on adapters"
-            - pkg: "github.com/vladpb/clyde/internal/application"
+            - pkg: "github.com/Systemartis/clyde/internal/application"
               desc: "domain must not depend on application"
 
         application-via-ports:
@@ -63,7 +63,7 @@ linters:
           files:
             - "**/internal/application/**/*.go"
           deny:
-            - pkg: "github.com/vladpb/clyde/internal/adapters"
+            - pkg: "github.com/Systemartis/clyde/internal/adapters"
               desc: "application uses ports (interfaces), not adapters"
             - pkg: "github.com/charmbracelet/bubbletea"
               desc: "application is pure use cases — no UI"
@@ -79,7 +79,7 @@ linters:
           files:
             - "**/internal/ports/**/*.go"
           deny:
-            - pkg: "github.com/vladpb/clyde/internal/adapters"
+            - pkg: "github.com/Systemartis/clyde/internal/adapters"
               desc: "ports are interfaces only — no concrete adapter imports"
 
     revive:
@@ -138,4 +138,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/vladpb/clyde
+        - github.com/Systemartis/clyde

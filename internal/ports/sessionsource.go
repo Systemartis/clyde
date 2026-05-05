@@ -37,7 +37,7 @@ type SessionSource interface {
 // JSONL file, plus the absolute path for on-demand event loading.
 type GlobalSessionRef struct {
 	// ProjectEncodedDir is the encoded project directory name under ~/.claude/projects/,
-	// e.g. "-Users-vladpb-work-Personal-clyde".
+	// e.g. "-Users-alice-work-clyde".
 	ProjectEncodedDir string
 
 	// SessionID is the session identifier (the JSONL filename without extension).

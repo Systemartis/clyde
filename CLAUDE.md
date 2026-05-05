@@ -45,7 +45,7 @@ internal/domain      -> pure value objects + rules: session, event, project,
 
 `cmd/clyde/main.go` is the only place adapters are constructed and injected. Read it first to understand the wire-up — every adapter you'll see referenced elsewhere is plugged in there. Note the **shared `gitSource`** between `livesession` and the diff adapter, and the **shared `claudesettings.New()`** between `mcpconfig` and `lspscan`: these exist so the per-tick caches coalesce instead of each adapter spawning its own subprocess / re-parsing the same file.
 
-### Layering enforcement (and a known gotcha)
+### Layering enforcement
 
 `.golangci.yml` declares `depguard` rules that forbid:
 
@@ -53,9 +53,7 @@ internal/domain      -> pure value objects + rules: session, event, project,
 - `internal/application/**` from importing adapters or UI packages.
 - `internal/ports/**` from importing adapters.
 
-**Known issue:** the depguard `pkg:` patterns in `.golangci.yml` still reference the old module path `github.com/vladpb/clyde`, but the module is now `github.com/Systemartis/clyde` (see `go.mod`). The deny-list for cross-package imports therefore does not match real imports — only the third-party package denials (bubbletea, lipgloss, net/http, os, fsnotify) currently fire. Stale `vladpb` references also exist in a handful of test fixtures and adapter strings (grep `vladpb` to find them). When you change layering rules, update the module path in `.golangci.yml` too.
-
-The hexagonal contract is still real and CONTRIBUTING.md treats it as enforced — write code as if depguard were catching violations, because the next person to fix the config will discover them.
+These rules are active — `golangci-lint run` rejects layering violations. CONTRIBUTING.md treats this as enforced; write code as if the contract were checked at every commit, because it is.
 
 ## Strict TDD
 

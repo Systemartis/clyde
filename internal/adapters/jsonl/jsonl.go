@@ -4,8 +4,8 @@
 // # Directory layout
 //
 //	~/.claude/projects/
-//	  -Users-vladpb-work-Personal-clyde/   ← encodeProjectPath("/Users/vladpb/work/Personal/clyde")
-//	    <uuid>.jsonl                        ← one file per session
+//	  -Users-alice-work-clyde/   ← encodeProjectPath("/Users/alice/work/clyde")
+//	    <uuid>.jsonl              ← one file per session
 //
 // # JSONL format
 //
