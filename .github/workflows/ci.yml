@@ -78,6 +78,32 @@ jobs:
       - name: govulncheck
         run: govulncheck ./...
 
+  smoke:
+    name: smoke (--demo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: build
+        run: go build -o /tmp/clyde ./cmd/clyde
+
+      - name: run --demo for 3s
+        run: |
+          # Demo mode does no live reads. We expect the binary to start a
+          # bubbletea program; SIGTERM (124) is the success signal here.
+          set +e
+          timeout --signal=TERM 3 /tmp/clyde --demo --layout=stack < /dev/null
+          code=$?
+          if [ $code -ne 124 ] && [ $code -ne 0 ]; then
+            echo "::error::clyde --demo exited with $code"
+            exit 1
+          fi
+
   fuzz:
     name: fuzz (smoke, ~90s)
     runs-on: ubuntu-latest
