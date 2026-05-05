@@ -19,7 +19,7 @@ Clyde runs as your unprivileged user account on a single machine. The trust boun
 
 ## Localhost hook server
 
-Clyde binds `127.0.0.1:<random-port>` to receive hook callbacks from `claude`. The listener is loopback-only AND requires a per-process random auth token printed to stderr at startup.
+Clyde binds `127.0.0.1:<random-port>` to receive hook callbacks from `claude`. The listener is loopback-only AND requires a per-process random auth token. The token-bearing callback URL is written to `$XDG_CACHE_HOME/clyde/hook-url` (or `~/.cache/clyde/hook-url`) with mode `0600` — never to stderr, where it would be visible in copy-pasted bug reports.
 
 When the TUI cannot drain hook events fast enough to keep the internal buffer below capacity, additional hook calls are **denied** rather than auto-approved. Users see a re-prompt in `claude` rather than a silent approval — this prevents a hung TUI or another local process from harvesting approvals the user never granted.
 

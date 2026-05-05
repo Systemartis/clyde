@@ -1,0 +1,51 @@
+name: codeql
+
+# Static analysis for Go. Default `security-and-quality` query suite catches
+# the OWASP-style classes (path traversal, command injection, weak crypto,
+# unchecked errors that mask security failures, etc.) without the noise of
+# the experimental queries.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly drift scan — catches advisories that land in the database after
+    # our last commit touched a vulnerable code path.
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  analyze:
+    name: analyze (go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: init codeql
+        uses: github/codeql-action/init@v3
+        with:
+          languages: go
+          queries: security-and-quality
+
+      - name: build
+        run: go build ./...
+
+      - name: analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:go"
