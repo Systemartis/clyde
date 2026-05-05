@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/adapters/fsexplorer"
+	"github.com/Systemartis/clyde/internal/adapters/fsexplorer"
 )
 
 // mkDir creates a directory inside root (creates parent dirs as needed).

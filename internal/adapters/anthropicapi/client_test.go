@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // fakeClock returns a fixed time for deterministic tests.

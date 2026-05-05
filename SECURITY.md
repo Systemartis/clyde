@@ -2,13 +2,13 @@
 
 ## Reporting a vulnerability
 
-If you've found a security issue in Clyde, please **do not** open a public GitHub issue. Email the maintainer instead:
+If you've found a security issue in Clyde, please **do not** open a public GitHub issue. Email the maintainers instead:
 
-- **Contact:** vlad.bejat@gmail.com
+- **Contact:** contact@systemartis.com
 - Use the subject line: `[clyde-security] short summary`
 - Include: affected version, reproduction steps, expected vs. actual behavior, and your assessment of impact.
 
-You will receive an acknowledgment **as soon as possible**. I aim to provide a fix or mitigation plan within **14 days** for high/critical issues, longer for lower-severity items. Once a patch is shipped I'll credit you in the release notes (unless you'd rather stay anonymous).
+You will receive an acknowledgment **as soon as possible**. We aim to provide a fix or mitigation plan within **14 days** for high/critical issues, longer for lower-severity items. Once a patch is shipped we'll credit you in the release notes (unless you'd rather stay anonymous).
 
 ## Trust model
 

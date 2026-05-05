@@ -1,8 +1,8 @@
 package tui
 
 import (
-	"github.com/clyde-tui/clyde/internal/adapters/hookserver"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/adapters/hookserver"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // planUsageMsg carries the result of a PlanUsageSource.Fetch.

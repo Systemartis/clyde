@@ -10,8 +10,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/session"
 )
 
 // SessionSource is the port through which the application layer discovers and

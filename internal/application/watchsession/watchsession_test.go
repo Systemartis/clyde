@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/session"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/ports"
 
-	"github.com/clyde-tui/clyde/internal/application/watchsession"
+	"github.com/Systemartis/clyde/internal/application/watchsession"
 )
 
 // stubSessionSource is a test-only in-memory fake for ports.SessionSource.

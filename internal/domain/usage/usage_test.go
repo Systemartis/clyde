@@ -3,7 +3,7 @@ package usage_test
 import (
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/domain/usage"
 )
 
 // TestUsageZeroIsIdentity tests the left-identity law: Zero.Add(a) == a

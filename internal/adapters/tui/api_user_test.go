@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // TestApplyPlanUsage_DetectsAPIUser covers the primary fix for the

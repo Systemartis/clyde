@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/clyde-tui/clyde/internal/adapters/claudesettings"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/adapters/claudesettings"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // Source is the concrete LSPSource. Construct with New (for production)

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/session"
 )
 
 // TestSessionTabsFromView_HidesSingleSession verifies that a cwd with only

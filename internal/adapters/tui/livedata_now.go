@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/event"
 )
 
 // nowIdleThreshold is the duration after which a session with no new events is

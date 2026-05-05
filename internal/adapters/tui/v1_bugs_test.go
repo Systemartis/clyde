@@ -17,9 +17,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/usage"
 )
 
 // ─── Bug 1: Explorer scrollable / resizable in active mode ────────────────────

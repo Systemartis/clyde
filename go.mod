@@ -1,4 +1,4 @@
-module github.com/clyde-tui/clyde
+module github.com/Systemartis/clyde
 
 go 1.26
 

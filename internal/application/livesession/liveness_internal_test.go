@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/domain/session"
 )
 
 // TestIsSessionLive_SlashNewGhost is the regression for the bug where

@@ -9,7 +9,7 @@
 // Last verified: 2026-04-30.
 package pricing
 
-import "github.com/clyde-tui/clyde/internal/domain/usage"
+import "github.com/Systemartis/clyde/internal/domain/usage"
 
 // Model holds the pricing and context metadata for a Claude model.
 type Model struct {

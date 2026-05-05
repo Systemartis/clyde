@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/session"
-	usagePkg "github.com/clyde-tui/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/session"
+	usagePkg "github.com/Systemartis/clyde/internal/domain/usage"
 )
 
 func startsWith(s, prefix string) bool {

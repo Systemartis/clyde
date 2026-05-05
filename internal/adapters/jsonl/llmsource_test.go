@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/adapters/jsonl"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/adapters/jsonl"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // TestLLMSourcePort verifies that *jsonl.Source fully satisfies the

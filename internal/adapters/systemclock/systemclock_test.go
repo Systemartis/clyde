@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/adapters/systemclock"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/adapters/systemclock"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // compile-time assertion: *Clock satisfies ports.Clock.

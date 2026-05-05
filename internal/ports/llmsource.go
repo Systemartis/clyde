@@ -15,8 +15,8 @@ package ports
 import (
 	"context"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/session"
 )
 
 // LLMSource is the unified interface for reading session data from any AI CLI.

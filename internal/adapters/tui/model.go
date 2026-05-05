@@ -11,10 +11,10 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/clyde-tui/clyde/internal/adapters/hookserver"
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/project"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/adapters/hookserver"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/project"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // PanelID identifies a focusable panel.

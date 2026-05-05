@@ -1,6 +1,6 @@
 # Contributing to Clyde
 
-Thanks for considering a contribution! Clyde is a small, focused TUI and I'd love hearing from people who use it. Whether you're filing a bug, suggesting an idea, or sending a patch, you're welcome here.
+Thanks for considering a contribution! Clyde is a small, focused TUI and we'd love hearing from people who use it. Whether you're filing a bug, suggesting an idea, or sending a patch, you're welcome here.
 
 ## Code of conduct
 
@@ -8,17 +8,17 @@ This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md). By partic
 
 ## Asking questions
 
-For open-ended questions ("how do I…", "what's the right way to…", "is this a bug?"), please use [GitHub Discussions](https://github.com/clyde-tui/clyde/discussions). Issues are reserved for actionable bug reports and feature requests.
+For open-ended questions ("how do I…", "what's the right way to…", "is this a bug?"), please use [GitHub Discussions](https://github.com/Systemartis/clyde/discussions). Issues are reserved for actionable bug reports and feature requests.
 
 ## Reporting bugs
 
-Open a [bug report](https://github.com/clyde-tui/clyde/issues/new?template=bug_report.yml). The template asks for the things we usually need: `clyde --version`, OS + terminal emulator, Claude Code version, repro steps, and what you expected vs. what happened. A short screencast (asciinema or VHS) is gold.
+Open a [bug report](https://github.com/Systemartis/clyde/issues/new?template=bug_report.yml). The template asks for the things we usually need: `clyde --version`, OS + terminal emulator, Claude Code version, repro steps, and what you expected vs. what happened. A short screencast (asciinema or VHS) is gold.
 
 Please search existing issues first — chances are someone hit it too.
 
 ## Suggesting features
 
-Open a [feature request](https://github.com/clyde-tui/clyde/issues/new?template=feature_request.yml). Describe the problem you're trying to solve before describing the solution — it makes the discussion much more productive.
+Open a [feature request](https://github.com/Systemartis/clyde/issues/new?template=feature_request.yml). Describe the problem you're trying to solve before describing the solution — it makes the discussion much more productive.
 
 ## Security issues
 
@@ -53,4 +53,4 @@ New features generally land as a new adapter or as an extension to an existing o
 
 ## Need help?
 
-Open a [Discussion](https://github.com/clyde-tui/clyde/discussions) or email vlad.bejat@gmail.com. We're happy to help you find your way around.
+Open a [Discussion](https://github.com/Systemartis/clyde/discussions) or email contact@systemartis.com. We're happy to help you find your way around.

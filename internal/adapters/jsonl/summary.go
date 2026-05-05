@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/event"
 )
 
 // ─── Content block types ─────────────────────────────────────────────────────

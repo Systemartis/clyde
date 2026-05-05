@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/event"
 )
 
 // ─── I.1: Bunny event triggers ───────────────────────────────────────────────

@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // deriveCacheStats maps the live session's cache stats into the TUI view.

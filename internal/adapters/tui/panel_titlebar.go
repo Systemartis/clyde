@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/pricing"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/pricing"
 )
 
 // renderTitleBar renders the slim top bar:

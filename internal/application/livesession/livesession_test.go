@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/project"
-	"github.com/clyde-tui/clyde/internal/domain/session"
-	usagePkg "github.com/clyde-tui/clyde/internal/domain/usage"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/project"
+	"github.com/Systemartis/clyde/internal/domain/session"
+	usagePkg "github.com/Systemartis/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // ─── Test doubles ─────────────────────────────────────────────────────────────

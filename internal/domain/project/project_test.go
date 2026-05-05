@@ -4,7 +4,7 @@ package project_test
 import (
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/domain/project"
+	"github.com/Systemartis/clyde/internal/domain/project"
 )
 
 // TestProjectCWD verifies that a Project created with a given working directory

@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // DiffSource is the minimal interface for fetching git diff hunks.

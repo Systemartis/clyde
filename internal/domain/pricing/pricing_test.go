@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/domain/pricing"
-	"github.com/clyde-tui/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/domain/pricing"
+	"github.com/Systemartis/clyde/internal/domain/usage"
 )
 
 // approxEqual returns true when a and b differ by less than epsilon.

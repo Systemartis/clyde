@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/clyde-tui/clyde/internal/adapters/hookserver"
+	"github.com/Systemartis/clyde/internal/adapters/hookserver"
 )
 
 // Compile-time assertion: Model implements tea.Model.

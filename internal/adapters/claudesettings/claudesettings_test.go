@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/adapters/claudesettings"
+	"github.com/Systemartis/clyde/internal/adapters/claudesettings"
 )
 
 // TestRead_CacheHitOnUnchangedFile verifies the perf contract: when the

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/adapters/jsonl"
-	"github.com/clyde-tui/clyde/internal/domain/session"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/adapters/jsonl"
+	"github.com/Systemartis/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // compile-time assertion: *Source satisfies ports.SessionSource.
