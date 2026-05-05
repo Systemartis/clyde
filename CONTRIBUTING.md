@@ -53,4 +53,4 @@ New features generally land as a new adapter or as an extension to an existing o
 
 ## Need help?
 
-Open a [Discussion](https://github.com/Systemartis/clyde/discussions) or email vlad.bejat@gmail.com. We're happy to help you find your way around.
+Open a [Discussion](https://github.com/Systemartis/clyde/discussions) or email contact@systemartis.com. We're happy to help you find your way around.
