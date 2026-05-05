@@ -15,6 +15,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -162,9 +163,19 @@ func run() int {
 							fmt.Fprintf(os.Stderr, "clyde: hook server error: %v\n", serveErr)
 						}
 					}()
-					fmt.Fprintf(os.Stderr, "clyde: hook server on port %d (per-process auth token attached)\n", hs.Port())
-					fmt.Fprintf(os.Stderr, "clyde: add to ~/.claude/settings.json:\n")
-					fmt.Fprintf(os.Stderr, `  "hooks": { "PreToolUse": [{ "type": "http", "url": "%s" }] }%s`, hs.URL(), "\n")
+					// The token-bearing URL goes to a 0600 file under
+					// $XDG_CACHE_HOME (or ~/.cache) — never to stderr. Stderr
+					// is the bubbletea-rendered terminal AND ends up in copy-
+					// pasted bug reports; either path leaks the auth token.
+					hookURLPath, urlErr := writeHookURLFile(hs.URL())
+					if urlErr != nil {
+						fmt.Fprintf(os.Stderr, "clyde: cannot write hook url file: %v\n", urlErr)
+						fmt.Fprintf(os.Stderr, "clyde: hook server on port %d but no URL file written\n", hs.Port())
+					} else {
+						fmt.Fprintf(os.Stderr, "clyde: hook server on port %d (URL written to %s, mode 0600)\n",
+							hs.Port(), hookURLPath)
+						fmt.Fprintf(os.Stderr, "clyde: add the URL from that file to ~/.claude/settings.json under hooks.PreToolUse\n")
+					}
 				}
 
 				// Phase E: wire git diff adapter — shares the gitSource cache
@@ -187,4 +198,33 @@ func run() int {
 		return 1
 	}
 	return 0
+}
+
+// writeHookURLFile persists the token-bearing hook callback URL to a
+// 0600-mode file under $XDG_CACHE_HOME (or ~/.cache as fallback). Returns
+// the absolute path on success.
+//
+// Stderr is intentionally never the carrier for this URL. Two reasons:
+//   - the parent stderr feeds the bubbletea-rendered alt screen, so a
+//     direct write would corrupt the TUI;
+//   - users routinely paste startup output into bug reports — that would
+//     leak the per-process auth token.
+func writeHookURLFile(url string) (string, error) {
+	cacheHome := os.Getenv("XDG_CACHE_HOME")
+	if cacheHome == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("user home: %w", err)
+		}
+		cacheHome = filepath.Join(home, ".cache")
+	}
+	dir := filepath.Join(cacheHome, "clyde")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("mkdir %s: %w", dir, err)
+	}
+	path := filepath.Join(dir, "hook-url")
+	if err := os.WriteFile(path, []byte(url+"\n"), 0o600); err != nil {
+		return "", fmt.Errorf("write %s: %w", path, err)
+	}
+	return path, nil
 }
