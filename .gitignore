@@ -16,3 +16,4 @@ coverage.html
 docs/
 openspec/
 .atl/
+.playwright-mcp/

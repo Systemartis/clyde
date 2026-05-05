@@ -511,27 +511,27 @@ flag.StringVar(&amp;sourceFlag, "source", "claude", "...")</code></pre>
 
 <!-- ============== SLIDE 9: GAPS IN SKILLS.SH ============== -->
 <section class="slide" data-slide="9">
-  <h2>Honest assessment: gaps in skills.sh</h2>
-  <p class="sub">8 catalog agents converged on the same blind spots. Where skills.sh has nothing, we reference upstream docs in the plan.</p>
+  <h2>Honest assessment: gaps in skills.sh — revised after wave 4</h2>
+  <p class="sub">Wave 3 (WebFetch) said all 10 gaps were empty. Wave 4 (real browser, actually typing into the SPA's search) found 4 fillers sitting just past the leaderboard fold. Updated below.</p>
 
   <table>
-    <thead><tr><th>Topic</th><th>Best skills.sh hit</th><th>Authoritative source</th></tr></thead>
+    <thead><tr><th>Topic</th><th>skills.sh result</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td><strong>goreleaser</strong></td><td>(none)</td><td><a href="https://goreleaser.com">goreleaser.com</a></td></tr>
-      <tr><td><strong>SBOM (CycloneDX/SPDX)</strong></td><td>(none, only OWASP A06 mention)</td><td><code>cyclonedx-gomod</code>, <code>syft</code></td></tr>
-      <tr><td><strong>cosign keyless signing</strong></td><td>(none)</td><td><a href="https://sigstore.dev">sigstore.dev</a></td></tr>
-      <tr><td><strong>SLSA provenance</strong></td><td>(none)</td><td><code>actions/attest-build-provenance</code></td></tr>
-      <tr><td><strong>GitHub Actions hardening</strong></td><td>openai/security-ownership-map (CODEOWNERS only)</td><td>OpenSSF Scorecard, <code>zizmor</code></td></tr>
-      <tr><td><strong>Go log/slog</strong></td><td>boristane/logging-best-practices (language-agnostic)</td><td><code>pkg.go.dev/log/slog</code></td></tr>
-      <tr><td><strong>Bubble Tea / TUI testing</strong></td><td>(none)</td><td><code>charm.land/teatest</code> docs</td></tr>
-      <tr><td><strong>Go performance / pprof</strong></td><td>jeffallan/golang-pro (workflow only, no commands)</td><td><code>pkg.go.dev/runtime/pprof</code>, benchstat</td></tr>
-      <tr><td><strong>Homebrew tap automation</strong></td><td>(none)</td><td>goreleaser <code>brews:</code> block</td></tr>
-      <tr><td><strong>DCO / CLA enforcement</strong></td><td>(none)</td><td>github.com/apps/dco</td></tr>
+      <tr><td><strong>goreleaser</strong></td><td><code>aaronflorey/agent-skills/goreleaser</code></td><td style="color: var(--good);">installed ★★★★</td></tr>
+      <tr><td><strong>SBOM (CycloneDX/SPDX)</strong></td><td><code>patricio0312rev/skills/artifact-sbom-publisher</code></td><td style="color: var(--good);">installed ★★★</td></tr>
+      <tr><td><strong>cosign keyless signing</strong></td><td>(confirmed empty)</td><td style="color: var(--bad);">gap real → sigstore.dev</td></tr>
+      <tr><td><strong>SLSA provenance</strong></td><td>partial: <code>jim60105/.../add-artifact-attestations-to-workflow</code> (Docker only) + SLSA section in SBOM skill</td><td style="color: var(--warn);">partially filled</td></tr>
+      <tr><td><strong>GitHub Actions hardening</strong></td><td>openai/security-ownership-map (CODEOWNERS only)</td><td style="color: var(--bad);">gap real → Scorecard, zizmor</td></tr>
+      <tr><td><strong>Go log/slog</strong></td><td>boristane (language-agnostic)</td><td style="color: var(--bad);">gap real → pkg.go.dev/log/slog</td></tr>
+      <tr><td><strong>Bubble Tea / TUI testing</strong></td><td><code>aaronflorey/agent-skills/charmbracelet</code></td><td style="color: var(--good);">installed ★★★★★</td></tr>
+      <tr><td><strong>Go performance / pprof</strong></td><td>jeffallan/golang-pro (workflow only)</td><td style="color: var(--bad);">gap real → runtime/pprof, benchstat</td></tr>
+      <tr><td><strong>Homebrew tap automation</strong></td><td>folded into goreleaser skill's <code>brews:</code> block</td><td style="color: var(--good);">filled via goreleaser</td></tr>
+      <tr><td><strong>DCO / CLA enforcement</strong></td><td>(confirmed empty)</td><td style="color: var(--bad);">gap real → github.com/apps/dco</td></tr>
     </tbody>
   </table>
 
-  <p class="sub" style="margin-top: 1.2em;">This isn't a flaw in our process — it's a real catalog limitation worth documenting. The Go OSS supply-chain story lives outside skills.sh today; the plan tasks pin authoritative URLs for each missing skill.</p>
-  <p class="sub" style="margin-top: 0.4em; font-size: 0.85em; opacity: 0.7;">Verified wave 3: 18 leaderboard fetches across query variations + Google <code>site:skills.sh</code> index — all 10 gaps confirmed, no missed installs.</p>
+  <p class="sub" style="margin-top: 1.2em;"><strong>Net:</strong> 4 of 10 filled, 1 partial, 5 genuinely empty. Three new skills installed: goreleaser, charmbracelet, artifact-sbom-publisher.</p>
+  <p class="sub" style="margin-top: 0.4em; font-size: 0.85em; opacity: 0.7;">Verified wave 4: Playwright-driven real browser at skills.sh, typed each query into the live search, read DOM. WebFetch had been seeing only the leaderboard's top ~92 skills — the SPA's filter operates on a much larger client-side dataset. Lesson: for SPA-fronted catalogs, drive a real browser.</p>
 </section>
 
 <!-- ============== SLIDE 10: PHASED PLAN ============== -->

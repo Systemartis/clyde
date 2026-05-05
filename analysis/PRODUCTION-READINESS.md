@@ -179,26 +179,36 @@ These were strong candidates but either overlap with installed skills, are too n
 - `monitoring-guidelines` (mindrally) — production-service SLOs/probes don't apply to a single-user TUI.
 - `sentry-cli` — auto-collects argv/env/host data, violates clyde's privacy stance.
 
-### 3.4 Honest assessment: gaps in skills.sh
+### 3.4 Honest assessment: gaps in skills.sh (revised after wave 4)
 
-8 catalog agents converged on the same blind spots. A wave-3 verification agent re-checked each gap against the live skills.sh leaderboard (259 skills) and `site:skills.sh` Google index — all 10 gaps confirmed, no missed installs. Where skills.sh has nothing, we reference upstream docs in the plan.
+The wave-3 conclusion ("all 10 gaps confirmed empty") was wrong. A wave-4 browser-driven re-sweep — actually typing into skills.sh's search box and reading what the SPA returned — found that the previous WebFetch agent had been seeing only the leaderboard's top ~92 skills. The real catalog is much larger; some of the "empty" topics had skills sitting just past the leaderboard fold.
 
-| Topic | Best skills.sh hit | Authoritative source |
-|-------|--------------------|----------------------|
-| goreleaser | (none) | [goreleaser.com](https://goreleaser.com) |
-| SBOM (CycloneDX/SPDX) | (none, only OWASP A06 mention) | `cyclonedx-gomod`, `syft` |
-| cosign keyless signing | (none) | [sigstore.dev](https://sigstore.dev) |
-| SLSA provenance | (none) | `actions/attest-build-provenance` |
-| GitHub Actions hardening | `openai/security-ownership-map` (CODEOWNERS only) | OpenSSF Scorecard, `zizmor` |
-| Go `log/slog` | `boristane/logging-best-practices` (language-agnostic) | [pkg.go.dev/log/slog](https://pkg.go.dev/log/slog) |
-| Bubble Tea / TUI testing | (none) | `charm.land/teatest` docs |
-| Go performance / pprof | `jeffallan/golang-pro` (workflow only, no commands) | [pkg.go.dev/runtime/pprof](https://pkg.go.dev/runtime/pprof), `benchstat` |
-| Homebrew tap automation | (none) | goreleaser `brews:` block |
-| DCO / CLA enforcement | (none) | [github.com/apps/dco](https://github.com/apps/dco) |
+**Updated gap status — 4 of 10 rows now have installed skills:**
 
-**This isn't a flaw in our process — it's a real catalog limitation worth documenting.** The Go OSS supply-chain story lives outside skills.sh today; the plan tasks pin authoritative URLs for each missing skill.
+| Topic | skills.sh result | Status | Authoritative source |
+|-------|------------------|--------|----------------------|
+| goreleaser | **`aaronflorey/agent-skills/goreleaser`** | **installed** ★★★★ — references for builds/archives/Docker/nfpm/Homebrew/signing/changelog/CI | [goreleaser.com](https://goreleaser.com) |
+| SBOM (CycloneDX/SPDX) | **`patricio0312rev/skills/artifact-sbom-publisher`** | **installed** ★★★ — CycloneDX + Syft + SLSA in one skill, GHA-flavored | `cyclonedx-gomod`, `syft` |
+| cosign keyless signing | (none — confirmed empty) | gap is real | [sigstore.dev](https://sigstore.dev) — referenced from the artifact-sbom-publisher skill |
+| SLSA provenance | partial: `jim60105/copilot-prompt/add-artifact-attestations-to-workflow` (Docker-image focused) + the SLSA section of the SBOM skill above | partially filled | `actions/attest-build-provenance@v2` |
+| GitHub Actions hardening | `openai/security-ownership-map` (CODEOWNERS only) | gap is real for SHA pinning, `persist-credentials`, Scorecard, zizmor | OpenSSF Scorecard, `zizmor` |
+| Go `log/slog` | `boristane/logging-best-practices` (language-agnostic) | gap is real for Go-specific guidance | [pkg.go.dev/log/slog](https://pkg.go.dev/log/slog) |
+| Bubble Tea / TUI testing | **`aaronflorey/agent-skills/charmbracelet`** | **installed** ★★★★★ — full Charm stack: Bubble Tea, Lip Gloss, Bubbles, Huh, Glamour, Log, troubleshooting, examples | [charm.land](https://charm.land), `charm.land/teatest` docs |
+| Go performance / pprof | `jeffallan/golang-pro` (workflow only) | gap is real | [pkg.go.dev/runtime/pprof](https://pkg.go.dev/runtime/pprof), `benchstat` |
+| Homebrew tap automation | folded into the `goreleaser` skill's `brews:` reference; standalone `bobmatnyc/claude-mpm-skills/homebrew-formula-maintenance` exists but is PyPI-specific | **filled** via goreleaser | goreleaser `brews:` block |
+| DCO / CLA enforcement | (none — confirmed empty) | gap is real | [github.com/apps/dco](https://github.com/apps/dco) |
 
-**Verification method (wave 3):** The agent fetched the skills.sh leaderboard 18× across query variations (`goreleaser`, `sbom`, `cyclonedx`, `cosign`, `sigstore`, `slsa`, `provenance`, `actions hardening`, `scorecard`, `zizmor`, `slog`, `bubble tea`, `teatest`, `pprof`, `benchstat`, `homebrew`, `dco`, `cla`) and cross-checked Google's `site:skills.sh` index. The catalog skews toward cloud platforms, frontend frameworks, marketing/SEO, and document processing — Go release engineering, supply-chain security, Actions hardening, Charm/TUI, Homebrew, and contribution governance are absent. Caveat: skills.sh's `?q=` is a client-side filter, so the verification rests on full-leaderboard scans rather than server-side search results.
+**Net result:** of the 10 originally claimed gaps, **4 are filled** (goreleaser, SBOM, Bubble Tea, Homebrew), **1 is partially filled** (SLSA — for Docker images only; Go-binary attestations still need upstream docs), and **5 remain genuinely empty** (cosign, GHA hardening, Go slog, Go pprof, DCO/CLA).
+
+Three new skills installed under `.claude/skills/` from this round:
+
+- **`goreleaser`** (aaronflorey) — high-quality skill with reference files for every release concern. Most useful for clyde directly.
+- **`charmbracelet`** (aaronflorey) — covers the entire Charm stack with reference files. Fills the Bubble Tea / Lip Gloss / Bubbles gap completely.
+- **`artifact-sbom-publisher`** (patricio0312rev) — CycloneDX + Syft + SLSA in one place. Note: the upstream is Node-flavored; our clyde-tuned rewrite swaps Node steps for `cyclonedx-gomod` + Go syft commands.
+
+**Verification method (wave 4):** Used Playwright to drive an actual browser session at `https://skills.sh`, typed each query into the live React-rendered search input, waited for the debounced filter to update, and read the resulting skill links from the DOM. Cross-referenced via direct `?q=...` URL navigation for high-priority terms (cosign, slsa, sigstore, cyclonedx, syft, pprof, benchstat, dco, zizmor) — these are confirmed empty at the time of writing. The wave-3 WebFetch approach failed because the catalog is much larger than the visible leaderboard, and `?q=` is a hash-route the SPA reads on hydration but WebFetch sees only the initial server-rendered HTML.
+
+**Lesson learned:** for SPA-fronted catalogs, drive a real browser. WebFetch is fine for static documentation but lies by omission about anything client-rendered.
 
 ---
 
