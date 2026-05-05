@@ -42,6 +42,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Systemartis/clyde/internal/domain/event"
@@ -72,6 +73,28 @@ type Source struct {
 	// catches both new appends and out-of-band rewrites.
 	cacheMu    sync.Mutex
 	eventCache map[session.ID]eventCacheEntry
+}
+
+// ShapeMisses is a snapshot of decode-failure counters. Returned by
+// Source.ShapeMisses(). Counters are process-global (decode is a free
+// function so the fuzz harness can call it without a Source).
+type ShapeMisses struct {
+	// User is the number of user-message decodes that returned an error.
+	User int64
+	// Assistant is the number of assistant-message Usage decodes that errored.
+	Assistant int64
+	// Content is the number of assistant-message Content decodes that errored.
+	Content int64
+}
+
+// ShapeMisses returns the current snapshot of decode-failure counters.
+// Safe to call concurrently with decode-driven traffic.
+func (s *Source) ShapeMisses() ShapeMisses {
+	return ShapeMisses{
+		User:      shapeMissUser.Load(),
+		Assistant: shapeMissAssistant.Load(),
+		Content:   shapeMissContent.Load(),
+	}
 }
 
 // eventCacheEntry is one memoised decode result.
@@ -498,9 +521,37 @@ func decodeLineWithMsgID(raw []byte) (ev event.Event, msgID string, err error) {
 		}
 	}
 
-	kind, payload, resolvedMsgID := resolveKindAndPayloadWithMsgID(env.Type, env.Message, raw, env)
+	kind, payload, resolvedMsgID, miss := resolveKindAndPayloadWithMsgID(env.Type, env.Message, raw, env)
+	if miss.user {
+		shapeMissUser.Add(1)
+	}
+	if miss.assistant {
+		shapeMissAssistant.Add(1)
+	}
+	if miss.content {
+		shapeMissContent.Add(1)
+	}
 	return event.NewEvent(env.UUID, ts, kind, env.SessionID, env.ParentUUID, payload), resolvedMsgID, nil
 }
+
+// shapeMissDelta records which best-effort decodes failed in a single
+// call to resolveKindAndPayloadWithMsgID. The decoder remains a free
+// function so the fuzz harness can exercise it without constructing a
+// Source; counters are folded by the caller.
+type shapeMissDelta struct {
+	user, assistant, content bool
+}
+
+// Package-scoped sinks consumed by Source.ShapeMisses(). The decoder is
+// a free function (the fuzz harness depends on that), so we route counter
+// increments through these atomics. A future refactor that makes the
+// decode chain a method on *Source can drop these in favor of fields on
+// the receiver — the public ShapeMisses() shape stays identical.
+var (
+	shapeMissUser      atomic.Int64
+	shapeMissAssistant atomic.Int64
+	shapeMissContent   atomic.Int64
+)
 
 // resolveKindAndPayload maps the JSONL event type string to a domain Kind and
 // constructs the appropriate Payload variant.
@@ -517,13 +568,16 @@ func decodeLineWithMsgID(raw []byte) (ev event.Event, msgID string, err error) {
 // resolveKindAndPayloadWithMsgID is the full implementation that additionally
 // returns the Anthropic message ID for assistant events (used for dedup).
 // msgID is empty for non-assistant events and when message.id is absent.
-func resolveKindAndPayloadWithMsgID(typeStr string, message json.RawMessage, rawLine []byte, env envelope) (event.Kind, event.Payload, string) {
+func resolveKindAndPayloadWithMsgID(typeStr string, message json.RawMessage, rawLine []byte, env envelope) (event.Kind, event.Payload, string, shapeMissDelta) {
+	var miss shapeMissDelta
 	switch typeStr {
 	case "user":
 		// Decode message.content for Summary / IsToolResultOnly derivation (ADR-009).
 		var uMsg userMessage
 		if len(message) > 0 {
-			_ = json.Unmarshal(message, &uMsg) //nolint:errcheck // best-effort
+			if err := json.Unmarshal(message, &uMsg); err != nil {
+				miss.user = true
+			}
 		}
 		summary, toolResultOnly := extractUserSummary(uMsg.Content)
 		toolResultIDs, toolResultError := extractToolResultInfo(uMsg.Content)
@@ -533,7 +587,7 @@ func resolveKindAndPayloadWithMsgID(typeStr string, message json.RawMessage, raw
 			Summary:          summary,
 			ToolResultIDs:    toolResultIDs,
 			ToolResultError:  toolResultError,
-		}, ""
+		}, "", miss
 
 	case "assistant":
 		var msg assistantMessage
@@ -541,7 +595,9 @@ func resolveKindAndPayloadWithMsgID(typeStr string, message json.RawMessage, raw
 		// malformed, we still return a valid AssistantPayload with zero usage
 		// rather than failing the whole parse.
 		if len(message) > 0 {
-			_ = json.Unmarshal(message, &msg) //nolint:errcheck // best-effort
+			if err := json.Unmarshal(message, &msg); err != nil {
+				miss.assistant = true
+			}
 		}
 		u := usage.Usage{
 			Input:         msg.Usage.InputTokens,
@@ -553,7 +609,9 @@ func resolveKindAndPayloadWithMsgID(typeStr string, message json.RawMessage, raw
 		// Decode message.content for Summary + tool_use derivation (ADR-010).
 		var aContent assistantContent
 		if len(message) > 0 {
-			_ = json.Unmarshal(message, &aContent) //nolint:errcheck // best-effort
+			if err := json.Unmarshal(message, &aContent); err != nil {
+				miss.content = true
+			}
 		}
 		summary := extractAssistantSummary(aContent.Content)
 		toolUseID, toolName := extractAssistantToolUse(aContent.Content)
@@ -568,14 +626,14 @@ func resolveKindAndPayloadWithMsgID(typeStr string, message json.RawMessage, raw
 			ToolUseID:  toolUseID,
 			ToolName:   toolName,
 			Has1hCache: has1hCache,
-		}, msg.ID
+		}, msg.ID, miss
 
 	default:
 		// Preserve the entire raw line so no information is lost.
 		// Make a copy — the scanner reuses its buffer between calls.
 		lineCopy := make([]byte, len(rawLine))
 		copy(lineCopy, rawLine)
-		return event.KindOpaque, event.OpaquePayload{Raw: lineCopy}, ""
+		return event.KindOpaque, event.OpaquePayload{Raw: lineCopy}, "", miss
 	}
 }
 
