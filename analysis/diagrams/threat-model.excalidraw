@@ -1,0 +1,249 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "clyde master analysis 2026-05-05",
+  "elements": [
+    {
+      "type": "text", "version": 1, "id": "title",
+      "x": 40, "y": 20, "width": 700, "height": 32, "angle": 0,
+      "strokeColor": "#1971c2", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 1, "version2": 1, "versionNonce": 1,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 24, "fontFamily": 1,
+      "text": "Hookserver threat model — fail-open path",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "Hookserver threat model — fail-open path",
+      "lineHeight": 1.25
+    },
+
+    {
+      "type": "rectangle", "version": 1, "id": "claude",
+      "x": 40, "y": 100, "width": 220, "height": 110, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "#e7f5ff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-claude"],
+      "frameId": null, "roundness": {"type": 3}, "seed": 11, "version2": 1, "versionNonce": 11,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "type": "text", "version": 1, "id": "claude-label",
+      "x": 50, "y": 115, "width": 200, "height": 80, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-claude"],
+      "frameId": null, "roundness": null, "seed": 12, "version2": 1, "versionNonce": 12,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 16, "fontFamily": 1,
+      "text": "claude CLI\nPreToolUse hook\nPOST /hook?t=<token>\ntool_name args cwd",
+      "textAlign": "center", "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "claude CLI\nPreToolUse hook\nPOST /hook?t=<token>\ntool_name args cwd",
+      "lineHeight": 1.2
+    },
+
+    {
+      "type": "rectangle", "version": 1, "id": "server",
+      "x": 360, "y": 80, "width": 320, "height": 220, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "#fff9db",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-server"],
+      "frameId": null, "roundness": {"type": 3}, "seed": 21, "version2": 1, "versionNonce": 21,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "type": "text", "version": 1, "id": "server-label",
+      "x": 372, "y": 92, "width": 296, "height": 192, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-server"],
+      "frameId": null, "roundness": null, "seed": 22, "version2": 1, "versionNonce": 22,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 15, "fontFamily": 1,
+      "text": "hookserver.Server\n127.0.0.1:<random>\n\n✓ ConstantTimeCompare\n✓ MaxBytesReader 64KB\n✓ Read/Write/Idle timeouts\n✓ POST + JSON only\n⚠ token printed to stderr",
+      "textAlign": "center", "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "hookserver.Server\n127.0.0.1:<random>\n\n✓ ConstantTimeCompare\n✓ MaxBytesReader 64KB\n✓ Read/Write/Idle timeouts\n✓ POST + JSON only\n⚠ token printed to stderr",
+      "lineHeight": 1.2
+    },
+
+    {
+      "type": "rectangle", "version": 1, "id": "chan",
+      "x": 760, "y": 100, "width": 200, "height": 130, "angle": 0,
+      "strokeColor": "#e8590c", "backgroundColor": "#fff5f5",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "dashed",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-chan"],
+      "frameId": null, "roundness": {"type": 3}, "seed": 31, "version2": 1, "versionNonce": 31,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "type": "text", "version": 1, "id": "chan-label",
+      "x": 770, "y": 110, "width": 180, "height": 110, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-chan"],
+      "frameId": null, "roundness": null, "seed": 32, "version2": 1, "versionNonce": 32,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 16, "fontFamily": 1,
+      "text": "events chan\nbuffer = 8\n\nFAIL-OPEN\non full → auto-allow",
+      "textAlign": "center", "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "events chan\nbuffer = 8\n\nFAIL-OPEN\non full → auto-allow",
+      "lineHeight": 1.2
+    },
+
+    {
+      "type": "rectangle", "version": 1, "id": "tui",
+      "x": 1020, "y": 100, "width": 180, "height": 130, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "#e6fcf5",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-tui"],
+      "frameId": null, "roundness": {"type": 3}, "seed": 41, "version2": 1, "versionNonce": 41,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "type": "text", "version": 1, "id": "tui-label",
+      "x": 1030, "y": 120, "width": 160, "height": 100, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-tui"],
+      "frameId": null, "roundness": null, "seed": 42, "version2": 1, "versionNonce": 42,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 16, "fontFamily": 1,
+      "text": "TUI\nnotification\npanel\nuser approves /\ndenies",
+      "textAlign": "center", "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "TUI\nnotification\npanel\nuser approves /\ndenies",
+      "lineHeight": 1.2
+    },
+
+    {
+      "type": "arrow", "version": 1, "id": "a1",
+      "x": 260, "y": 150, "width": 100, "height": 0, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": {"type": 2}, "seed": 51, "version2": 1, "versionNonce": 51,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "startBinding": null, "endBinding": null,
+      "lastCommittedPoint": null, "startArrowhead": null, "endArrowhead": "arrow",
+      "points": [[0,0],[100,0]]
+    },
+    {
+      "type": "arrow", "version": 1, "id": "a2",
+      "x": 680, "y": 150, "width": 80, "height": 0, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": {"type": 2}, "seed": 52, "version2": 1, "versionNonce": 52,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "startBinding": null, "endBinding": null,
+      "lastCommittedPoint": null, "startArrowhead": null, "endArrowhead": "arrow",
+      "points": [[0,0],[80,0]]
+    },
+    {
+      "type": "arrow", "version": 1, "id": "a3",
+      "x": 960, "y": 150, "width": 60, "height": 0, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": {"type": 2}, "seed": 53, "version2": 1, "versionNonce": 53,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "startBinding": null, "endBinding": null,
+      "lastCommittedPoint": null, "startArrowhead": null, "endArrowhead": "arrow",
+      "points": [[0,0],[60,0]]
+    },
+
+    {
+      "type": "rectangle", "version": 1, "id": "attacker",
+      "x": 40, "y": 360, "width": 240, "height": 110, "angle": 0,
+      "strokeColor": "#fa5252", "backgroundColor": "#fff5f5",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-att"],
+      "frameId": null, "roundness": {"type": 3}, "seed": 61, "version2": 1, "versionNonce": 61,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false
+    },
+    {
+      "type": "text", "version": 1, "id": "attacker-label",
+      "x": 50, "y": 370, "width": 220, "height": 90, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": ["g-att"],
+      "frameId": null, "roundness": null, "seed": 62, "version2": 1, "versionNonce": 62,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 15, "fontFamily": 1,
+      "text": "local process w/ token\n(out-of-scope per\nSECURITY.md — but TUI hang\nhas the same effect)",
+      "textAlign": "center", "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "local process w/ token\n(out-of-scope per\nSECURITY.md — but TUI hang\nhas the same effect)",
+      "lineHeight": 1.2
+    },
+
+    {
+      "type": "arrow", "version": 1, "id": "a-attack",
+      "x": 280, "y": 400, "width": 540, "height": -250, "angle": 0,
+      "strokeColor": "#fa5252", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": {"type": 2}, "seed": 71, "version2": 1, "versionNonce": 71,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "startBinding": null, "endBinding": null,
+      "lastCommittedPoint": null, "startArrowhead": null, "endArrowhead": "arrow",
+      "points": [[0,0],[540,-250]]
+    },
+    {
+      "type": "text", "version": 1, "id": "attack-label",
+      "x": 320, "y": 320, "width": 500, "height": 24, "angle": 0,
+      "strokeColor": "#fa5252", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 72, "version2": 1, "versionNonce": 72,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 1,
+      "text": "spam ≥9 hooks while user idle → channel full → auto-allow ✓",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "spam ≥9 hooks while user idle → channel full → auto-allow ✓",
+      "lineHeight": 1.25
+    },
+
+    {
+      "type": "text", "version": 1, "id": "f01",
+      "x": 40, "y": 510, "width": 1200, "height": 24, "angle": 0,
+      "strokeColor": "#e03131", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 81, "version2": 1, "versionNonce": 81,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 1,
+      "text": "F-01 · data race on serveErr (goroutine writes; Start reads after ctx.Done)",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "F-01 · data race on serveErr (goroutine writes; Start reads after ctx.Done)",
+      "lineHeight": 1.25
+    },
+    {
+      "type": "text", "version": 1, "id": "f03",
+      "x": 40, "y": 540, "width": 1200, "height": 24, "angle": 0,
+      "strokeColor": "#e8590c", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 82, "version2": 1, "versionNonce": 82,
+      "isDeleted": false, "boundElements": [], "updated": 1, "link": null, "locked": false,
+      "fontSize": 14, "fontFamily": 1,
+      "text": "F-03 · deny-on-full would close the auto-approve loophole; usability cost: one re-prompt",
+      "textAlign": "left", "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "F-03 · deny-on-full would close the auto-approve loophole; usability cost: one re-prompt",
+      "lineHeight": 1.25
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "currentItemFontFamily": 1,
+    "gridSize": null
+  },
+  "files": {}
+}

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clyde — Master Analysis</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg: #1a1b26;
+    --bg-elev: #24283b;
+    --fg: #c0caf5;
+    --fg-dim: #9aa5ce;
+    --accent: #7aa2f7;
+    --accent-2: #bb9af7;
+    --good: #9ece6a;
+    --warn: #e0af68;
+    --bad: #f7768e;
+    --hand: 'Caveat', 'Comic Sans MS', cursive;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: 18px; line-height: 1.55;
+    overflow: hidden;
+  }
+  #deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 4vh 6vw;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease-out;
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  h1 { font-size: 2.2rem; margin: 0 0 .25em 0; color: var(--accent); }
+  h2 { font-size: 1.6rem; margin: 0 0 .8em 0; color: var(--accent); }
+  h3 { font-size: 1.15rem; margin: 1.2em 0 .3em 0; color: var(--accent-2); }
+  .sub { color: var(--fg-dim); font-size: 1.05rem; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .8rem; background: var(--bg-elev); color: var(--fg-dim); margin-right: 6px; }
+  .pill.good { color: var(--good); border: 1px solid var(--good); }
+  .pill.warn { color: var(--warn); border: 1px solid var(--warn); }
+  .pill.bad { color: var(--bad); border: 1px solid var(--bad); }
+  .pill.accent { color: var(--accent); border: 1px solid var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin-top: 1em; font-size: .95rem; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--bg-elev); text-align: left; vertical-align: top; }
+  th { color: var(--fg-dim); font-weight: 600; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; }
+  code { background: var(--bg-elev); padding: 1px 6px; border-radius: 4px; font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: .9em; }
+  pre { background: var(--bg-elev); padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-size: .85rem; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; }
+  .stars { color: var(--warn); letter-spacing: 1px; }
+  .stars-dim { color: var(--fg-dim); letter-spacing: 1px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card { background: var(--bg-elev); border-radius: 8px; padding: 16px 20px; }
+  .card h4 { margin: 0 0 .4em 0; color: var(--accent); }
+  ul.compact { margin: .4em 0; padding-left: 1.2em; }
+  ul.compact li { margin: .15em 0; }
+  .nav {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center;
+    background: var(--bg-elev); padding: 6px 14px; border-radius: 999px;
+    color: var(--fg-dim); font-size: .85rem; z-index: 100;
+  }
+  .nav button {
+    background: transparent; border: 1px solid var(--fg-dim); color: var(--fg-dim);
+    padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: .8rem;
+  }
+  .nav button:hover { color: var(--accent); border-color: var(--accent); }
+  .counter { font-variant-numeric: tabular-nums; }
+  .hand { font-family: var(--hand); }
+  .key {
+    display: inline-block; min-width: 18px; padding: 1px 6px;
+    background: var(--bg-elev); border: 1px solid var(--fg-dim);
+    border-bottom-width: 2px; border-radius: 4px;
+    font-size: .75rem; font-family: monospace; color: var(--fg-dim);
+    text-align: center;
+  }
+  /* sketchy svg styling */
+  .sketch text {
+    font-family: 'Caveat', 'Architects Daughter', 'Comic Sans MS', cursive;
+    fill: var(--fg);
+  }
+  .sketch .node-fill { fill: var(--bg-elev); }
+  .sketch .stroke { stroke: var(--fg); stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .sketch .stroke-accent { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-linecap: round; }
+  .sketch .stroke-warn { stroke: var(--warn); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-dasharray: 3 3; }
+  .sketch .stroke-bad { stroke: var(--bad); stroke-width: 2; fill: none; stroke-linecap: round; }
+  .sketch .stroke-good { stroke: var(--good); stroke-width: 1.6; fill: none; stroke-linecap: round; }
+  .sketch text.title { font-weight: bold; font-size: 18px; }
+  .sketch text.label { font-size: 14px; }
+  .sketch text.note { font-size: 12px; fill: var(--fg-dim); font-style: italic; }
+  .sketch text.warn-text { fill: var(--warn); }
+  .sketch text.bad-text { fill: var(--bad); }
+  .sketch text.good-text { fill: var(--good); }
+  .footnote { color: var(--fg-dim); font-size: .8rem; margin-top: auto; padding-top: 1em; }
+  .severity-H { color: var(--bad); font-weight: 600; }
+  .severity-M { color: var(--warn); font-weight: 600; }
+  .severity-L { color: var(--accent); }
+  .severity-I { color: var(--fg-dim); }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="deck">
+
+<!-- ============== SLIDE 1: TITLE ============== -->
+<section class="slide" data-slide="1">
+  <div style="margin: auto; text-align: center;">
+    <h1 style="font-size: 3.6rem; margin-bottom: .15em;">Clyde</h1>
+    <p class="hand" style="font-size: 2rem; color: var(--accent); margin: 0;">Master Analysis</p>
+    <p class="sub" style="margin-top: 2em;">Applying skills.sh skill catalogs to a Go TUI · 2026-05-05</p>
+    <p class="sub" style="margin-top: 4em; font-size: .9rem;">
+      <span class="key">→</span> next &nbsp; <span class="key">←</span> back &nbsp; <span class="key">Esc</span> overview
+    </p>
+  </div>
+  <div class="footnote">branch: <code>chore/master-analysis</code> · 173 .go files · 25k LOC · 17k LOC tests</div>
+</section>
+
+<!-- ============== SLIDE 2: TL;DR ============== -->
+<section class="slide" data-slide="2">
+  <h2>TL;DR</h2>
+  <p class="sub">Clyde is in good shape. The interesting findings are about <em>enforcement drift</em>, not foundational design.</p>
+
+  <div class="grid-2" style="margin-top: 1em;">
+    <div class="card">
+      <h4>What's working</h4>
+      <ul class="compact">
+        <li>Hexagonal layering is real, with depguard rules…</li>
+        <li>Hookserver: loopback bind, 256-bit token, constant-time compare, body cap, timeouts ✓</li>
+        <li><code>govulncheck</code> in CI, race detector on every test</li>
+        <li>72 test files, ~40% test-to-code ratio</li>
+        <li>Adapter cache discipline (<code>git.Source</code>, <code>claudesettings.Reader</code>) — copy the shape</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>What's quietly broken</h4>
+      <ul class="compact">
+        <li>… but those depguard rules <span class="severity-H">silently no-op</span> after the module-path migration</li>
+        <li>Data race on <code>hookserver.serveErr</code></li>
+        <li>Hookserver <em>auto-allows</em> when its event channel is full</li>
+        <li>Zero fuzz tests despite five external-input parsers</li>
+        <li>TUI complexity exclusion is wholesale (no upper bound)</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top: 2em;">→ ranked 10 candidate skills, installed top 4 as project skills, filed 9 findings, planned remediation.</p>
+</section>
+
+<!-- ============== SLIDE 3: METHOD ============== -->
+<section class="slide" data-slide="3">
+  <h2>Method</h2>
+  <div class="grid-2">
+    <div>
+      <h3>Sources</h3>
+      <ul class="compact">
+        <li><code>skills.sh/?q=development</code></li>
+        <li><code>skills.sh/?q=golang</code></li>
+        <li><code>skills.sh/?q=architecture</code></li>
+        <li><code>skills.sh/?q=security</code></li>
+      </ul>
+
+      <h3>Loop</h3>
+      <ol class="compact">
+        <li>Fetch each candidate skill's <code>SKILL.md</code></li>
+        <li>Apply its checklist to clyde's tree</li>
+        <li>Score by what it surfaced <em>uniquely</em></li>
+        <li>Install winners as project skills, tuned to clyde</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Constraint</h3>
+      <p class="sub">Go toolchain isn't installed on the analysis machine, so no <code>go vet</code>, <code>go test -race</code>, <code>golangci-lint</code>, <code>govulncheck</code> output in this report.</p>
+      <p class="sub">All findings are static-read; anything labeled <em>verify locally</em> is a tool I couldn't run.</p>
+
+      <h3>Scoring</h3>
+      <ul class="compact">
+        <li><span class="stars">★★★★★</span> found a real defect or codified an unmonitored risk</li>
+        <li><span class="stars">★★★★</span> concrete refactoring leverage with named files</li>
+        <li><span class="stars">★★★</span> codified a methodology already in use</li>
+        <li><span class="stars">★★</span> overlap with existing workflow</li>
+        <li><span class="stars">★</span> wrong language/stack</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SLIDE 4: RANKING ============== -->
+<section class="slide" data-slide="4">
+  <h2>Skill ranking</h2>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Skill</th><th>Source</th><th>Score</th><th>What it uniquely surfaced</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td><strong>golang-pro</strong></td>
+        <td>jeffallan</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td>race on <code>hookserver.serveErr</code>; missing fuzz on 5 parsers; <code>io.Discard</code> hides Keychain errors; gocyclo/gocognit excluded for whole TUI package</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><strong>security-review</strong></td>
+        <td>zackkorman</td>
+        <td><span class="stars">★★★★★</span></td>
+        <td>hookserver fail-open on full channel; depguard rules silently no-op (module-path drift)</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><strong>improve-codebase-architecture</strong></td>
+        <td>mattpocock</td>
+        <td><span class="stars">★★★★</span></td>
+        <td>TUI shallow modules (1328-LOC <code>keys.go</code>, edit/view seam); <code>git.Source</code> + <code>claudesettings</code> cited as positive deep examples</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><strong>diagnose</strong></td>
+        <td>mattpocock</td>
+        <td><span class="stars">★★★</span></td>
+        <td>codifies methodology already practiced; explicit catalog of test seams (<code>now</code>, <code>runPS</code>, <code>httpClient</code>, <code>baseDir</code>)</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>tdd</td>
+        <td>mattpocock</td>
+        <td><span class="stars">★★★</span></td>
+        <td>"vertical slicing" anti-pattern note; otherwise overlaps with <code>CONTRIBUTING.md</code></td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>zoom-out</td>
+        <td>mattpocock</td>
+        <td><span class="stars-dim">★★</span></td>
+        <td>overlaps with <code>openspec/specs/</code></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>grill-with-docs</td>
+        <td>mattpocock</td>
+        <td><span class="stars-dim">★★</span></td>
+        <td>overlaps with openspec discuss-phase</td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>code-review-security</td>
+        <td>hieutrtr</td>
+        <td><span class="stars-dim">★</span></td>
+        <td>Python/React-specific; <code>eval</code>/<code>pickle</code>/<code>dangerouslySetInnerHTML</code> — none apply</td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>security-review</td>
+        <td>sickn33</td>
+        <td><span class="stars-dim">★</span></td>
+        <td>Next.js/Supabase/Solana — wrong stack</td>
+      </tr>
+      <tr>
+        <td>—</td>
+        <td>audit</td>
+        <td>pbakaus/impeccable</td>
+        <td><span class="stars-dim">☆</span></td>
+        <td>frontend a11y/perf/theming — doesn't apply to a TUI</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="sub" style="margin-top: 1.5em;">Top 4 installed under <code>.claude/skills/</code> as <strong>clyde-tuned</strong> versions — rewritten to reference real files and patterns in this repo.</p>
+</section>
+
+<!-- ============== SLIDE 5: ARCHITECTURE DIAGRAM ============== -->
+<section class="slide" data-slide="5">
+  <h2>Architecture map · the hexagonal contract</h2>
+  <p class="sub">Inward dependency arrow. <span class="severity-H">Red dashed</span> edges are forbidden. <span class="severity-M">Yellow dashed</span> = currently unenforced after module-path migration.</p>
+
+  <svg viewBox="0 0 1100 540" class="sketch" style="width: 100%; max-height: 70vh; margin-top: 12px;">
+    <!-- background grid (subtle) -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+      <marker id="arrow-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#f7768e"/>
+      </marker>
+      <marker id="arrow-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#e0af68"/>
+      </marker>
+    </defs>
+
+    <!-- domain (center) -->
+    <rect class="node-fill stroke" x="470" y="220" width="180" height="100" rx="14"/>
+    <text class="title" x="560" y="255" text-anchor="middle">domain/</text>
+    <text class="note" x="560" y="278" text-anchor="middle">stdlib only</text>
+    <text class="note" x="560" y="296" text-anchor="middle">session · event · usage</text>
+    <text class="note" x="560" y="312" text-anchor="middle">project · pricing</text>
+
+    <!-- ports (around domain) -->
+    <rect class="node-fill stroke" x="470" y="80" width="180" height="100" rx="14"/>
+    <text class="title" x="560" y="115" text-anchor="middle">ports/</text>
+    <text class="note" x="560" y="138" text-anchor="middle">SessionSource · Clock</text>
+    <text class="note" x="560" y="156" text-anchor="middle">LLMSource · MCPSource</text>
+    <text class="note" x="560" y="174" text-anchor="middle">ProcessSource · …</text>
+
+    <!-- application -->
+    <rect class="node-fill stroke" x="200" y="220" width="180" height="100" rx="14"/>
+    <text class="title" x="290" y="255" text-anchor="middle">application/</text>
+    <text class="note" x="290" y="278" text-anchor="middle">livesession</text>
+    <text class="note" x="290" y="296" text-anchor="middle">watchsession</text>
+    <text class="note" x="290" y="312" text-anchor="middle">use cases · pure</text>
+
+    <!-- adapters -->
+    <rect class="node-fill stroke" x="730" y="220" width="220" height="160" rx="14"/>
+    <text class="title" x="840" y="252" text-anchor="middle">adapters/</text>
+    <text class="note" x="840" y="274" text-anchor="middle">jsonl · git · fsexplorer</text>
+    <text class="note" x="840" y="290" text-anchor="middle">hookserver · anthropicapi</text>
+    <text class="note" x="840" y="306" text-anchor="middle">claudesettings · mcpconfig</text>
+    <text class="note" x="840" y="322" text-anchor="middle">lspscan · processscan</text>
+    <text class="note" x="840" y="338" text-anchor="middle">systemclock · tui</text>
+    <text class="note" x="840" y="358" text-anchor="middle">(I/O lives here)</text>
+
+    <!-- cmd/clyde -->
+    <rect class="node-fill stroke" x="470" y="420" width="180" height="80" rx="14"/>
+    <text class="title" x="560" y="453" text-anchor="middle">cmd/clyde/</text>
+    <text class="note" x="560" y="476" text-anchor="middle">composition root</text>
+    <text class="note" x="560" y="492" text-anchor="middle">main.go — wiring only</text>
+
+    <!-- legal arrows -->
+    <!-- application → ports -->
+    <path class="stroke-good" d="M 380 265 Q 425 200 470 130" marker-end="url(#arrow)"/>
+    <text class="label good-text" x="395" y="190">uses</text>
+    <!-- ports → domain -->
+    <path class="stroke-good" d="M 560 180 L 560 220" marker-end="url(#arrow)"/>
+    <!-- adapters → ports (impl) -->
+    <path class="stroke-good" d="M 730 240 Q 690 180 650 140" marker-end="url(#arrow)"/>
+    <text class="label good-text" x="700" y="200">impl</text>
+    <!-- adapters → domain (read DTOs) -->
+    <path class="stroke-good" d="M 730 280 L 650 280" marker-end="url(#arrow)"/>
+    <!-- cmd → all -->
+    <path class="stroke-accent" d="M 540 420 Q 380 380 290 320" marker-end="url(#arrow)"/>
+    <path class="stroke-accent" d="M 580 420 Q 760 380 830 380" marker-end="url(#arrow)"/>
+    <path class="stroke-accent" d="M 560 420 L 560 320" marker-end="url(#arrow)"/>
+
+    <!-- forbidden: domain → adapters -->
+    <path class="stroke-warn" d="M 650 250 Q 690 220 730 230" marker-end="url(#arrow-warn)"/>
+    <text class="label warn-text" x="690" y="216">⚠ unenforced</text>
+    <!-- forbidden: domain → application -->
+    <path class="stroke-warn" d="M 470 290 L 380 290" marker-end="url(#arrow-warn)"/>
+    <text class="label warn-text" x="395" y="306">⚠ unenforced</text>
+
+    <!-- legend -->
+    <g transform="translate(40, 40)">
+      <text class="title" x="0" y="0">Legend</text>
+      <line class="stroke-good" x1="0" y1="20" x2="40" y2="20" marker-end="url(#arrow)"/>
+      <text class="label" x="50" y="24">allowed (lint enforces 3rd-party only)</text>
+      <line class="stroke-warn" x1="0" y1="44" x2="40" y2="44" marker-end="url(#arrow-warn)"/>
+      <text class="label warn-text" x="50" y="48">forbidden — lint should reject, currently no-ops</text>
+      <line class="stroke-accent" x1="0" y1="68" x2="40" y2="68" marker-end="url(#arrow)"/>
+      <text class="label" x="50" y="72">composition root wiring</text>
+    </g>
+
+    <text class="note" x="40" y="510">Finding F-02 · <tspan class="bad-text">.golangci.yml depguard rules reference github.com/vladpb/clyde — module is now github.com/Systemartis/clyde</tspan></text>
+  </svg>
+</section>
+
+<!-- ============== SLIDE 6: THREAT MODEL DIAGRAM ============== -->
+<section class="slide" data-slide="6">
+  <h2>Threat model · the hookserver path</h2>
+  <p class="sub">Loopback HTTP listener that PAUSES <code>claude</code> tool calls until clyde's TUI approves. Token-authed, but the buffer-full branch is the interesting one.</p>
+
+  <svg viewBox="0 0 1100 480" class="sketch" style="width: 100%; max-height: 65vh; margin-top: 8px;">
+    <defs>
+      <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+      <marker id="a2-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#f7768e"/>
+      </marker>
+    </defs>
+
+    <!-- claude CLI -->
+    <rect class="node-fill stroke" x="40" y="60" width="200" height="100" rx="12"/>
+    <text class="title" x="140" y="95" text-anchor="middle">claude CLI</text>
+    <text class="note" x="140" y="115" text-anchor="middle">PreToolUse hook</text>
+    <text class="note" x="140" y="132" text-anchor="middle">POST /hook?t=&lt;token&gt;</text>
+    <text class="note" x="140" y="148" text-anchor="middle">body: tool_name, args, cwd</text>
+
+    <!-- listener -->
+    <rect class="node-fill stroke" x="350" y="40" width="280" height="200" rx="12"/>
+    <text class="title" x="490" y="75" text-anchor="middle">hookserver.Server</text>
+    <text class="note" x="490" y="98" text-anchor="middle">127.0.0.1:&lt;random&gt;</text>
+    <text class="label good-text" x="370" y="125">✓ ConstantTimeCompare</text>
+    <text class="label good-text" x="370" y="148">✓ MaxBytesReader 64KB</text>
+    <text class="label good-text" x="370" y="171">✓ Read/Write/Idle timeouts</text>
+    <text class="label good-text" x="370" y="194">✓ POST-only, JSON-only</text>
+    <text class="label warn-text" x="370" y="217">⚠ token printed to stderr</text>
+
+    <!-- channel -->
+    <rect class="node-fill stroke-warn" x="700" y="60" width="160" height="100" rx="10"/>
+    <text class="title" x="780" y="95" text-anchor="middle">events chan</text>
+    <text class="note" x="780" y="115" text-anchor="middle">buffer = 8</text>
+    <text class="note bad-text" x="780" y="135" text-anchor="middle">FAIL-OPEN</text>
+    <text class="note" x="780" y="151" text-anchor="middle">on full → auto-allow</text>
+
+    <!-- TUI -->
+    <rect class="node-fill stroke" x="900" y="60" width="160" height="100" rx="12"/>
+    <text class="title" x="980" y="95" text-anchor="middle">TUI</text>
+    <text class="note" x="980" y="118" text-anchor="middle">notification panel</text>
+    <text class="note" x="980" y="138" text-anchor="middle">user approves / denies</text>
+
+    <!-- happy path arrows -->
+    <path class="stroke" d="M 240 110 L 350 110" marker-end="url(#a2)"/>
+    <text class="label" x="265" y="100">request</text>
+    <path class="stroke" d="M 630 110 L 700 110" marker-end="url(#a2)"/>
+    <text class="label" x="640" y="100">enqueue</text>
+    <path class="stroke" d="M 860 110 L 900 110" marker-end="url(#a2)"/>
+    <path class="stroke" d="M 900 140 L 860 140" marker-end="url(#a2)"/>
+    <text class="label" x="867" y="155">decide</text>
+    <path class="stroke" d="M 700 145 L 630 145" marker-end="url(#a2)"/>
+    <path class="stroke" d="M 350 145 L 240 145" marker-end="url(#a2)"/>
+    <text class="label" x="265" y="165">200 approve/block</text>
+
+    <!-- attacker -->
+    <rect class="node-fill stroke-bad" x="40" y="280" width="200" height="100" rx="12"/>
+    <text class="title bad-text" x="140" y="315" text-anchor="middle">local process</text>
+    <text class="note" x="140" y="338" text-anchor="middle">has token (in-scope per</text>
+    <text class="note" x="140" y="356" text-anchor="middle">SECURITY.md? out-of-scope —</text>
+    <text class="note" x="140" y="372" text-anchor="middle">but TUI hang has same effect)</text>
+
+    <!-- attack arrow -->
+    <path class="stroke-bad" d="M 240 330 Q 470 320 700 160" marker-end="url(#a2-bad)"/>
+    <text class="label bad-text" x="320" y="320">spam ≥9 hooks while user idle…</text>
+    <text class="label bad-text" x="500" y="270">…channel full…</text>
+    <text class="label bad-text" x="700" y="220">…auto-allow ✓</text>
+
+    <!-- finding callouts -->
+    <text class="note" x="40" y="430">F-01 · <tspan class="bad-text">data race on serveErr (goroutine writes; Start reads after ctx.Done)</tspan></text>
+    <text class="note" x="40" y="450">F-03 · <tspan class="warn-text">deny-on-full would close the auto-approve loophole; usability cost: one re-prompt</tspan></text>
+  </svg>
+</section>
+
+<!-- ============== SLIDE 7: TOP FINDINGS ============== -->
+<section class="slide" data-slide="7">
+  <h2>Top findings</h2>
+
+  <table>
+    <thead><tr><th>ID</th><th>Severity</th><th>Where</th><th>What</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>F-02</td>
+        <td><span class="severity-H">High</span></td>
+        <td><code>.golangci.yml:42-83</code></td>
+        <td>depguard <code>pkg:</code> patterns reference <code>vladpb/clyde</code> — module is now <code>Systemartis/clyde</code>. Cross-package layering rules silently no-op.</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>F-01</td>
+        <td><span class="severity-M">Medium</span></td>
+        <td><code>hookserver/server.go:161</code></td>
+        <td>Goroutine writes <code>serveErr</code>; spawning goroutine reads after <code>ctx.Done()</code>. Race-detector will flag.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>F-03</td>
+        <td><span class="severity-M">Medium</span></td>
+        <td><code>hookserver/server.go:235</code></td>
+        <td>Channel-full → auto-allow. TUI hang or local-process flood = silent approvals. Switch to deny-on-full.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>F-04</td>
+        <td><span class="severity-L">Low</span></td>
+        <td>5 parsers</td>
+        <td>No fuzz tests for JSONL, ps, git diff, OAuth response, settings.json. Each takes external bytes.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td>F-05</td>
+        <td><span class="severity-L">Low</span></td>
+        <td><code>credentials.go:117</code></td>
+        <td><code>cmd.Stderr = io.Discard</code> hides Keychain "user-not-authenticated" prompts.</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>F-06</td>
+        <td><span class="severity-I">Info</span></td>
+        <td><code>jsonl.go:526,544,556</code></td>
+        <td>3× <code>_ = json.Unmarshal</code> are best-effort but invisible. Add a typed shape-miss counter.</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>F-07</td>
+        <td><span class="severity-L">Low</span></td>
+        <td><code>.github/workflows/ci.yml</code></td>
+        <td>No <code>--demo</code> smoke job. Wiring regressions in <code>main.go</code> only show up at runtime.</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>F-08</td>
+        <td><span class="severity-I">Info</span></td>
+        <td><code>.golangci.yml:122</code></td>
+        <td><code>gocyclo</code>/<code>gocognit</code> excluded for whole TUI package — growth is unbounded.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>F-09</td>
+        <td><span class="severity-I">Info</span></td>
+        <td>4 TUI files &gt;900 LOC</td>
+        <td>Shallow modules (<code>keys.go</code> 1328, <code>mouse.go</code> 1054, <code>panel_viewer.go</code> 1092). Deepening sketch in report.</td>
+        <td>L</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin-top: 1em;">Full evidence in <code>analysis/MASTER-ANALYSIS.md</code> · sequenced in <code>plans/2026-05-05-master-analysis.md</code>.</p>
+</section>
+
+<!-- ============== SLIDE 8: SKILL ANATOMY ============== -->
+<section class="slide" data-slide="8">
+  <h2>What's installed under <code>.claude/skills/</code></h2>
+  <p class="sub">Each skill is a clyde-tuned rewrite of the upstream — references real files, real seams, the real depguard contract.</p>
+
+  <div class="grid-2" style="gap: 18px; margin-top: 12px;">
+    <div class="card">
+      <h4>golang-pro</h4>
+      <p class="sub" style="margin: 0 0 .6em 0; font-size: .9rem;">Use any time you touch a <code>.go</code> file.</p>
+      <ul class="compact" style="font-size: .9rem;">
+        <li>Layer-first: domain → application → ports → adapters</li>
+        <li>Race detector mandatory</li>
+        <li>Bounded reads on every external <code>io.Reader</code></li>
+        <li>Constant-time compare for tokens</li>
+        <li>Fuzz on JSONL/ps/git/OAuth/settings parsers</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h4>security-review</h4>
+      <p class="sub" style="margin: 0 0 .6em 0; font-size: .9rem;">Use when touching secrets, hookserver, exec, HTTP, user-controlled paths.</p>
+      <ul class="compact" style="font-size: .9rem;">
+        <li>Walks the <code>SECURITY.md</code> trust boundary</li>
+        <li>Shellout, file I/O, HTTP server, HTTP client, goroutine sub-checklists</li>
+        <li>Triage matrix to skip when not needed</li>
+        <li>Outputs <code>analysis/SECURITY-FINDINGS.md</code> entries</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h4>improve-codebase-architecture</h4>
+      <p class="sub" style="margin: 0 0 .6em 0; font-size: .9rem;">Use when refactoring, adding adapters, or files pass ~500 LOC of branching.</p>
+      <ul class="compact" style="font-size: .9rem;">
+        <li>Ousterhout vocabulary: depth, seam, leverage, locality</li>
+        <li>Deletion test, "two adapters = real seam"</li>
+        <li>Pre-named friction list (TUI <code>keys.go</code>, <code>panel_viewer.go</code>)</li>
+        <li>Positive examples (<code>git.Source</code>, <code>claudesettings</code>)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h4>diagnose</h4>
+      <p class="sub" style="margin: 0 0 .6em 0; font-size: .9rem;">Use before fixing any bug.</p>
+      <ul class="compact" style="font-size: .9rem;">
+        <li>Build a deterministic loop &lt; 2s</li>
+        <li>3–5 falsifiable hypotheses, ranked</li>
+        <li>Catalog of test seams in clyde adapters</li>
+        <li>Regression test at the architectural seam closest to the bug</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SLIDE 9: PLAN ============== -->
+<section class="slide" data-slide="9">
+  <h2>Sequenced plan · superpowers writing-plans</h2>
+  <p class="sub">File: <code>plans/2026-05-05-master-analysis.md</code>. Each step is a separately-mergeable PR with its own tests. Order matters — early steps unblock later ones.</p>
+
+  <table style="margin-top: 1em;">
+    <thead><tr><th>Step</th><th>Title</th><th>Unblocks</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Restore depguard enforcement (F-02)</td><td>everything else</td><td>XS</td></tr>
+      <tr><td>2</td><td>Fix hookserver race (F-01)</td><td>—</td><td>S</td></tr>
+      <tr><td>3</td><td>Hookserver fail-closed (F-03)</td><td>—</td><td>S</td></tr>
+      <tr><td>4</td><td>Add fuzz tests for 5 parsers (F-04)</td><td>—</td><td>M</td></tr>
+      <tr><td>5</td><td>CI <code>--demo</code> smoke job (F-07)</td><td>—</td><td>XS</td></tr>
+      <tr><td>6</td><td>Capture Keychain stderr (F-05)</td><td>—</td><td>XS</td></tr>
+      <tr><td>7</td><td>Shape-miss counter on jsonl.Source (F-06)</td><td>—</td><td>XS</td></tr>
+      <tr><td>8</td><td>Narrow TUI lint exclusion (F-08)</td><td>step 9</td><td>S</td></tr>
+      <tr><td>9</td><td>Deepen TUI shallow modules (F-09)</td><td>—</td><td>L (multi-PR)</td></tr>
+    </tbody>
+  </table>
+
+  <p class="sub" style="margin-top: 1.5em;">Steps 1, 5, 6, 7 are mechanical and can land same day. Steps 2, 3 need teatest fixtures. Step 4 is a methodical sweep across packages. Steps 8 + 9 are a refactor mini-milestone.</p>
+</section>
+
+<!-- ============== SLIDE 10: ARTIFACTS ============== -->
+<section class="slide" data-slide="10">
+  <h2>What landed on this branch</h2>
+  <p class="sub">Branch: <code>chore/master-analysis</code></p>
+
+  <div style="margin-top: 1em;">
+    <h3>New files</h3>
+    <pre><code>.claude/skills/README.md
+.claude/skills/golang-pro/SKILL.md
+.claude/skills/security-review/SKILL.md
+.claude/skills/improve-codebase-architecture/SKILL.md
+.claude/skills/diagnose/SKILL.md
+analysis/MASTER-ANALYSIS.md
+analysis/presentation.html             ← this deck
+analysis/diagrams/architecture.excalidraw
+analysis/diagrams/threat-model.excalidraw
+plans/2026-05-05-master-analysis.md    ← sequenced superpowers plan</code></pre>
+
+    <h3 style="margin-top: 1.4em;">Untouched (intentionally)</h3>
+    <pre><code>internal/**         (no behavior changes — this branch only adds analysis)
+.golangci.yml       (F-02 fix is the FIRST step of the plan, in its own PR)
+SECURITY.md         (the trust boundary we cite is already correct)</code></pre>
+  </div>
+
+  <p class="footnote">Run <code>open analysis/presentation.html</code> to revisit. Sources for every skill cited inline in the report.</p>
+</section>
+
+<!-- ============== SLIDE 11: CLOSE ============== -->
+<section class="slide" data-slide="11">
+  <div style="margin: auto; text-align: center;">
+    <h1 style="font-size: 2.6rem;">Done.</h1>
+    <p class="sub" style="margin-top: .5em;">9 findings · 4 skills installed · 1 sequenced plan · 1 deck.</p>
+    <p class="hand" style="font-size: 1.6rem; color: var(--accent); margin-top: 1.2em;">Ship the depguard fix first.</p>
+    <p class="sub" style="margin-top: 4em; font-size: .85rem;">
+      Press <span class="key">←</span> to revisit · <span class="key">Esc</span> for overview · refresh to restart
+    </p>
+  </div>
+</section>
+
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous">←</button>
+  <span class="counter"><span id="cur">1</span> / <span id="total">11</span></span>
+  <button id="next" aria-label="Next">→</button>
+  <button id="overview">Overview</button>
+</div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let cur = 0;
+  document.getElementById('total').textContent = total;
+  function show(n) {
+    cur = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === cur));
+    document.getElementById('cur').textContent = cur + 1;
+    history.replaceState(null, '', '#' + (cur + 1));
+  }
+  function fromHash() {
+    const h = parseInt(location.hash.replace('#', ''), 10);
+    if (!isNaN(h) && h >= 1 && h <= total) show(h - 1); else show(0);
+  }
+  document.getElementById('next').onclick = () => show(cur + 1);
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('overview').onclick = () => {
+    document.body.classList.toggle('overview-mode');
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { show(cur + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { show(cur - 1); e.preventDefault(); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+    else if (/^[0-9]$/.test(e.key)) { const n = parseInt(e.key, 10) || 10; show(n - 1); }
+  });
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+
+</body>
+</html>
