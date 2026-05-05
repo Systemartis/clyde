@@ -159,12 +159,18 @@ func (s *Server) Events() <-chan HookEvent {
 // point it performs a graceful shutdown and closes the events channel.
 // Start is safe to call in a goroutine. It must only be called once.
 func (s *Server) Start(ctx context.Context) error {
-	var serveErr error
+	// Buffered so the goroutine can deposit its result and exit even if
+	// nobody is yet receiving. The send-into-channel happens-before the
+	// receive below, which gives Start the synchronization edge a plain
+	// stack-allocated error variable lacks.
+	serveErrCh := make(chan error, 1)
 
 	go func() {
 		if err := s.srv.Serve(s.listener); err != nil && err != http.ErrServerClosed {
-			serveErr = err
+			serveErrCh <- err
+			return
 		}
+		serveErrCh <- nil
 	}()
 
 	<-ctx.Done()
@@ -178,7 +184,7 @@ func (s *Server) Start(ctx context.Context) error {
 		close(s.events)
 	})
 
-	return serveErr
+	return <-serveErrCh
 }
 
 // hookRequest is the JSON body expected from the claude CLI hook call.
