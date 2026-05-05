@@ -117,10 +117,14 @@ linters:
           - misspell
 
       # TUI adapter package: keyboard/mouse handlers, renderers, and viewers
-      # are event-dispatch state machines. Their cyclomatic/cognitive complexity
-      # is structural, not a sign of bad design — excluding them keeps the
-      # linters meaningful for domain and application code.
-      - path: internal/adapters/tui/
+      # are event-dispatch state machines. The named files below are
+      # structural complexity (big switch tables) — refactoring them adds
+      # nothing. The wholesale package exclusion was unsafe: it let new
+      # complexity creep into adjacent files like model.go / panel_*.go
+      # unchallenged. Restrict the exemption to the files that genuinely
+      # need it. Adding a new exempt file is a small lint-config PR, not
+      # a hidden default.
+      - path: internal/adapters/tui/(keys|mouse|panel_viewer|settings_overlay|update|viewer_vim)\.go$
         linters:
           - gocyclo
           - gocognit
