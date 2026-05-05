@@ -1,14 +1,25 @@
 # Project skills
 
-This directory pins four skills that survived a master analysis of clyde (see `analysis/MASTER-ANALYSIS.md` for the ranking and rationale). Each one is sourced from skills.sh and re-tuned to match clyde's hexagonal layout and trust model.
+Pinned skills sourced from skills.sh and re-tuned to clyde's hexagonal layout, trust model, and OSS launch posture. Two analysis passes contributed:
+
+- `analysis/MASTER-ANALYSIS.md` (correctness lens) — installed the first 4
+- `analysis/PRODUCTION-READINESS.md` (OSS launch lens) — installed 7 more, plus 1 custom
 
 | Skill | Use when | Source |
 |-------|----------|--------|
-| [`golang-pro`](./golang-pro/SKILL.md) | reviewing, writing, or refactoring any `.go` file | [skills.sh/jeffallan/claude-skills/golang-pro](https://skills.sh/jeffallan/claude-skills/golang-pro) |
-| [`security-review`](./security-review/SKILL.md) | adding/changing secrets, hookserver, exec, HTTP, or user-controlled paths | [skills.sh/zackkorman/skills/security-review](https://skills.sh/zackkorman/skills/security-review) |
-| [`improve-codebase-architecture`](./improve-codebase-architecture/SKILL.md) | refactoring, adding adapters/ports, or when a file passes ~500 LOC of branching | [skills.sh/mattpocock/skills/improve-codebase-architecture](https://skills.sh/mattpocock/skills/improve-codebase-architecture) |
-| [`diagnose`](./diagnose/SKILL.md) | investigating any bug, flaky test, or unexpected behavior — *before* proposing a fix | [skills.sh/mattpocock/skills/diagnose](https://skills.sh/mattpocock/skills/diagnose) |
+| [`golang-pro`](./golang-pro/SKILL.md) | reviewing/writing any `.go` file | [skills.sh](https://skills.sh/jeffallan/claude-skills/golang-pro) |
+| [`security-review`](./security-review/SKILL.md) | secrets / hookserver / exec / HTTP / user-paths | [skills.sh](https://skills.sh/zackkorman/skills/security-review) |
+| [`improve-codebase-architecture`](./improve-codebase-architecture/SKILL.md) | refactor / new adapter / file >500 LOC of branches | [skills.sh](https://skills.sh/mattpocock/skills/improve-codebase-architecture) |
+| [`diagnose`](./diagnose/SKILL.md) | investigating any bug — *before* proposing a fix | [skills.sh](https://skills.sh/mattpocock/skills/diagnose) |
+| [`trailofbits-semgrep`](./trailofbits-semgrep/SKILL.md) | hookserver / OAuth / exec changes — run SAST | [skills.sh](https://skills.sh/trailofbits/skills/semgrep) |
+| [`supply-chain-risk-auditor`](./supply-chain-risk-auditor/SKILL.md) | new direct dep / quarterly sweep / major bump | [skills.sh](https://skills.sh/trailofbits/skills/supply-chain-risk-auditor) |
+| [`secret-scanning`](./secret-scanning/SKILL.md) | BEFORE going public; on any creds-touching PR | [skills.sh](https://skills.sh/github/awesome-copilot/secret-scanning) |
+| [`dependabot-tuning`](./dependabot-tuning/SKILL.md) | reviewing `.github/dependabot.yml`; PR noise | [skills.sh](https://skills.sh/github/awesome-copilot/dependabot) |
+| [`changelog-generator`](./changelog-generator/SKILL.md) | bootstrapping CHANGELOG; cutting a release | [skills.sh](https://skills.sh/composiohq/awesome-claude-skills/changelog-generator) |
+| [`logging-best-practices`](./logging-best-practices/SKILL.md) | introducing `slog`; fixing TUI stderr corruption | [skills.sh](https://skills.sh/boristane/agent-skills/logging-best-practices) |
+| [`gh-cli`](./gh-cli/SKILL.md) | release operations; verifying signatures | [skills.sh](https://skills.sh/github/awesome-copilot/gh-cli) |
+| [`clyde-release-ritual`](./clyde-release-ritual/SKILL.md) | every tagged release — sequences the full checklist | custom (Systemartis) |
 
-These are committed into the repo so every contributor (human or agent) sees the same checklist. They are **not** the upstream skills verbatim — each was rewritten to reference the actual files and patterns in clyde's tree (depguard rules, hookserver auth, JSONL dedup, git cache, etc.). Update them when the underlying code shape changes.
+These are committed into the repo so every contributor (human or agent) sees the same checklist. They are **not** the upstream skills verbatim — each was rewritten to reference the actual files and patterns in clyde's tree. Update them when the underlying code shape changes.
 
-The full ranking, including skills that *didn't* make the cut and why, lives in [`../../analysis/MASTER-ANALYSIS.md`](../../analysis/MASTER-ANALYSIS.md).
+The full rankings — including skills that *didn't* make the cut and why — live in [`../../analysis/MASTER-ANALYSIS.md`](../../analysis/MASTER-ANALYSIS.md) §6 and [`../../analysis/PRODUCTION-READINESS.md`](../../analysis/PRODUCTION-READINESS.md) §3.

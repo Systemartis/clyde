@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clyde — Production Readiness</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg: #1a1b26;
+    --bg-elev: #24283b;
+    --fg: #c0caf5;
+    --fg-dim: #9aa5ce;
+    --accent: #7aa2f7;
+    --accent-2: #bb9af7;
+    --accent-3: #7dcfff;
+    --good: #9ece6a;
+    --warn: #e0af68;
+    --bad: #f7768e;
+    --hand: 'Caveat', 'Comic Sans MS', cursive;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    font-size: 17px; line-height: 1.55;
+    overflow: hidden;
+  }
+  #deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 3.5vh 5vw;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease-out;
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  h1 { font-size: 2.2rem; margin: 0 0 .25em 0; color: var(--accent); }
+  h2 { font-size: 1.55rem; margin: 0 0 .6em 0; color: var(--accent); }
+  h3 { font-size: 1.1rem; margin: 1em 0 .3em 0; color: var(--accent-2); }
+  .sub { color: var(--fg-dim); font-size: 1rem; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .78rem; background: var(--bg-elev); color: var(--fg-dim); margin-right: 6px; }
+  .pill.good { color: var(--good); border: 1px solid var(--good); }
+  .pill.warn { color: var(--warn); border: 1px solid var(--warn); }
+  .pill.bad { color: var(--bad); border: 1px solid var(--bad); }
+  .pill.crit { color: var(--bad); border: 1px solid var(--bad); background: rgba(247,118,142,0.12); }
+  table { border-collapse: collapse; width: 100%; margin-top: .8em; font-size: .88rem; }
+  th, td { padding: 6px 9px; border-bottom: 1px solid var(--bg-elev); text-align: left; vertical-align: top; }
+  th { color: var(--fg-dim); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  code { background: var(--bg-elev); padding: 1px 5px; border-radius: 4px; font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: .88em; }
+  pre { background: var(--bg-elev); padding: 10px 14px; border-radius: 6px; overflow-x: auto; font-size: .82rem; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; }
+  .stars { color: var(--warn); letter-spacing: 1px; }
+  .stars-dim { color: var(--fg-dim); letter-spacing: 1px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .card { background: var(--bg-elev); border-radius: 8px; padding: 12px 16px; }
+  .card h4 { margin: 0 0 .35em 0; color: var(--accent); font-size: 1rem; }
+  ul.compact { margin: .35em 0; padding-left: 1.15em; }
+  ul.compact li { margin: .12em 0; font-size: .92rem; }
+  .nav {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; align-items: center;
+    background: var(--bg-elev); padding: 6px 14px; border-radius: 999px;
+    color: var(--fg-dim); font-size: .82rem; z-index: 100;
+  }
+  .nav button {
+    background: transparent; border: 1px solid var(--fg-dim); color: var(--fg-dim);
+    padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: .78rem;
+  }
+  .nav button:hover { color: var(--accent); border-color: var(--accent); }
+  .counter { font-variant-numeric: tabular-nums; }
+  .hand { font-family: var(--hand); }
+  .key {
+    display: inline-block; min-width: 18px; padding: 1px 6px;
+    background: var(--bg-elev); border: 1px solid var(--fg-dim);
+    border-bottom-width: 2px; border-radius: 4px;
+    font-size: .72rem; font-family: monospace; color: var(--fg-dim);
+    text-align: center;
+  }
+  .sketch text {
+    font-family: 'Caveat', 'Architects Daughter', 'Comic Sans MS', cursive;
+    fill: var(--fg);
+  }
+  .sketch .node-fill { fill: var(--bg-elev); }
+  .sketch .stroke { stroke: var(--fg); stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .sketch .stroke-accent { stroke: var(--accent); stroke-width: 1.6; fill: none; stroke-linecap: round; }
+  .sketch .stroke-warn { stroke: var(--warn); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-dasharray: 3 3; }
+  .sketch .stroke-bad { stroke: var(--bad); stroke-width: 2; fill: none; stroke-linecap: round; }
+  .sketch .stroke-good { stroke: var(--good); stroke-width: 1.6; fill: none; stroke-linecap: round; }
+  .sketch text.title { font-weight: bold; font-size: 17px; }
+  .sketch text.label { font-size: 13px; }
+  .sketch text.note { font-size: 11px; fill: var(--fg-dim); font-style: italic; }
+  .sketch text.warn-text { fill: var(--warn); }
+  .sketch text.bad-text { fill: var(--bad); }
+  .sketch text.good-text { fill: var(--good); }
+  .footnote { color: var(--fg-dim); font-size: .76rem; margin-top: auto; padding-top: .8em; }
+  .severity-C { color: var(--bad); font-weight: 700; }
+  .severity-H { color: var(--bad); font-weight: 600; }
+  .severity-M { color: var(--warn); font-weight: 600; }
+  .severity-L { color: var(--accent); }
+  .severity-I { color: var(--fg-dim); }
+  .phase {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    background: var(--accent); color: var(--bg); font-weight: 600; font-size: .78rem;
+  }
+  .phase-2 { background: var(--accent-2); }
+  .phase-3 { background: var(--accent-3); }
+  .phase-4 { background: var(--good); }
+  .phase-5 { background: var(--warn); }
+  .phase-6 { background: var(--bad); }
+  .num-big { font-size: 3rem; color: var(--accent); font-weight: 700; line-height: 1; }
+  .stat { text-align: center; }
+  .stat-label { color: var(--fg-dim); font-size: .8rem; margin-top: .2em; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="deck">
+
+<!-- ============== SLIDE 1: TITLE ============== -->
+<section class="slide" data-slide="1">
+  <div style="margin: auto; text-align: center;">
+    <h1 style="font-size: 3.2rem; margin-bottom: .15em;">Clyde</h1>
+    <p class="hand" style="font-size: 1.9rem; color: var(--accent); margin: 0;">Production-Readiness Analysis</p>
+    <p class="sub" style="margin-top: 1.6em;">From "shipped MVP" to "open-source release under Systemartis"</p>
+    <p class="sub" style="margin-top: 1.4em;">14 parallel research agents · 2 fact-checkers · 38 findings · 8 skills installed</p>
+    <p class="sub" style="margin-top: 3em; font-size: .85rem;">
+      <span class="key">→</span> next &nbsp; <span class="key">←</span> back &nbsp; <span class="key">1-9</span> jump
+    </p>
+  </div>
+  <div class="footnote">2026-05-05 · branch <code>chore/production-readiness</code> · companion to <code>analysis/MASTER-ANALYSIS.md</code></div>
+</section>
+
+<!-- ============== SLIDE 2: METHOD ============== -->
+<section class="slide" data-slide="2">
+  <h2>Method</h2>
+  <div class="grid-3">
+    <div class="card">
+      <h4>Wave 1 — research</h4>
+      <p class="sub" style="font-size: .88rem; margin: .3em 0;">14 parallel agents, ~2.5 hours wall-clock total</p>
+      <ul class="compact">
+        <li>8 catalog agents on skills.sh by topic</li>
+        <li>6 codebase audits by lens</li>
+        <li>Each agent self-contained, &lt;3000 words</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Wave 2 — fact-check</h4>
+      <p class="sub" style="font-size: .88rem; margin: .3em 0;">2 parallel agents</p>
+      <ul class="compact">
+        <li>24 file:line code claims verified</li>
+        <li>18 skill URLs + methodology verified</li>
+        <li><strong>23/24</strong> + <strong>14/18</strong> confirmed</li>
+        <li>Nuances captured in the report</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Wave 3 — synthesis</h4>
+      <p class="sub" style="font-size: .88rem; margin: .3em 0;">38 PR-NN findings, 7-phase plan</p>
+      <ul class="compact">
+        <li>Severity-ranked, file:line cited</li>
+        <li>Each finding traces to ≥1 agent</li>
+        <li>Top 8 skills installed, clyde-tuned</li>
+        <li>Plan sequences by dependency</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid-4" style="margin-top: 1.4em;">
+    <div class="stat"><div class="num-big">14</div><div class="stat-label">research agents</div></div>
+    <div class="stat"><div class="num-big">38</div><div class="stat-label">new findings</div></div>
+    <div class="stat"><div class="num-big">8</div><div class="stat-label">skills installed</div></div>
+    <div class="stat"><div class="num-big">7</div><div class="stat-label">phases in plan</div></div>
+  </div>
+
+  <p class="sub" style="margin-top: 1.4em;">Constraint: no Go toolchain on the analysis machine. Every line-cited claim is verified by the wave-2 fact-checker reading the file directly. Anything that requires <code>go test -race</code> is tagged "verify locally" in the plan.</p>
+</section>
+
+<!-- ============== SLIDE 3: TL;DR ============== -->
+<section class="slide" data-slide="3">
+  <h2>TL;DR</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4 style="color: var(--good);">Foundation is solid</h4>
+      <ul class="compact">
+        <li>Hexagonal layering enforced (modulo F-02 fix)</li>
+        <li>Race-tested CI · govulncheck · dependabot</li>
+        <li>72 test files · 17k LOC tests · table-driven</li>
+        <li>SECURITY.md trust model is real</li>
+        <li>Conventional Commits · CONTRIBUTING.md sound</li>
+        <li>Adapter cache discipline (<code>git.Source</code>, <code>claudesettings</code>)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="color: var(--bad);">Two Critical gaps block any tagged release</h4>
+      <ul class="compact">
+        <li><strong>PR-01:</strong> no <code>--version</code> flag; bug template asks for it</li>
+        <li><strong>PR-02:</strong> no goreleaser, no git tags, no signed releases, no multi-arch binaries</li>
+      </ul>
+      <h4 style="color: var(--warn); margin-top: 1em;">Two High gaps surface immediately</h4>
+      <ul class="compact">
+        <li><strong>PR-03:</strong> <code>LICENSE</code> copyright is "Vlad Popescu-Bejat", not Systemartis</li>
+        <li><strong>PR-07:</strong> hookserver URL printed to stderr <em>contains the auth token</em></li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top: 1.4em;">Plus 5 more High/Medium clusters: pseudo-version supply chain (PR-04/05), structured logging (PR-15), CodeQL/SBOM/signed-releases gap (PR-16/17/30), CI hardening (PR-19/20/21/27/28/29), composition-root + Keychain test gaps (PR-22/23).</p>
+
+  <p class="sub" style="margin-top: 1em;">→ Phase 1-4 of the plan are launch-blocking. Phase 5+ elevates to "polished public launch."</p>
+</section>
+
+<!-- ============== SLIDE 4: CRITICAL FINDINGS ============== -->
+<section class="slide" data-slide="4">
+  <h2>The two Critical findings</h2>
+
+  <div class="card" style="border-left: 4px solid var(--bad);">
+    <h4><span class="pill crit">CRITICAL</span> PR-01 · No <code>--version</code> flag</h4>
+    <pre><code># bug_report.yml asks for it
+- type: input
+  attributes:
+    label: Version
+    description: Run <strong>`clyde --version`</strong>
+# but main.go defines only:
+flag.StringVar(&amp;layoutFlag, "layout", "", "...")
+flag.BoolVar(&amp;demoFlag, "demo", false, "...")
+flag.StringVar(&amp;sourceFlag, "source", "claude", "...")</code></pre>
+    <p class="sub" style="margin: .3em 0;">Verified: zero <code>runtime/debug.ReadBuildInfo()</code> in tree. Users today get "flag provided but not defined: -version" — a broken first impression.</p>
+  </div>
+
+  <div class="card" style="border-left: 4px solid var(--bad); margin-top: 1em;">
+    <h4><span class="pill crit">CRITICAL</span> PR-02 · No release infrastructure at all</h4>
+    <ul class="compact">
+      <li>No <code>.goreleaser.yml</code> (verified: <code>find</code> returns empty)</li>
+      <li>No <code>release.yml</code> workflow</li>
+      <li>No git tags (verified: <code>git tag --list</code> empty)</li>
+      <li>No multi-arch binaries · no Homebrew tap · no Scoop bucket</li>
+      <li>Only install path: <code>go install</code> from source — requires Go 1.26+ on user's machine</li>
+      <li>No SBOM · no cosign signatures · no SLSA provenance</li>
+    </ul>
+    <p class="sub" style="margin-top: .4em;">Effort: M (~½ day for goreleaser config + release workflow + first <code>v0.1.0</code> tag); blocks every other ship-it task.</p>
+  </div>
+
+  <p class="sub" style="margin-top: 1em;">Both findings sit in <strong>Phase 1</strong> of the remediation plan. Until they ship, the rest of this work has nowhere to land.</p>
+</section>
+
+<!-- ============== SLIDE 5: HIGH FINDINGS ============== -->
+<section class="slide" data-slide="5">
+  <h2>High-severity findings</h2>
+
+  <table>
+    <thead><tr><th>ID</th><th>Where</th><th>Finding</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="severity-H">PR-03</span></td>
+        <td><code>LICENSE:3</code></td>
+        <td>Copyright is <code>Vlad Popescu-Bejat</code>, not Systemartis. Update to org or dual-attribution before public launch.</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td><span class="severity-H">PR-04</span></td>
+        <td><code>go.mod:17-19</code></td>
+        <td>Three indirect deps on pseudo-versions (<code>ultraviolet v0.0.0-20260416...</code>, <code>x/exp/golden v0.0.0-20251109...</code>, <code>terminfo v0.0.0-20220910...</code>). Dependabot semver gating doesn't apply.</td>
+        <td>S (coordinate w/ Charm + replace <code>terminfo</code>)</td>
+      </tr>
+      <tr>
+        <td><span class="severity-H">PR-05</span></td>
+        <td><code>go.mod:6-8</code></td>
+        <td>Charm modules use non-canonical <code>charm.land/*</code> redirect. If the redirect infrastructure is compromised, supply chain bypasses GitHub's HSM-backed release model.</td>
+        <td>M (request canonical paths upstream)</td>
+      </tr>
+      <tr>
+        <td><span class="severity-H">PR-06</span></td>
+        <td>repo root</td>
+        <td>No pre-built binaries. ARM64 users (M1/M2 Macs, RPi, Graviton) must compile from source — slower, requires Go toolchain.</td>
+        <td>S (folds into PR-02 goreleaser config)</td>
+      </tr>
+      <tr>
+        <td><span class="severity-H">PR-07</span></td>
+        <td><code>main.go:149-151</code><br><code>hookserver/server.go:148</code></td>
+        <td><code>hs.URL()</code> includes the auth token; full URL printed to stderr at startup. Users routinely paste startup output into bug reports — token leaks into shells, terminals, screenshots, screencasts.</td>
+        <td>S (write URL to <code>~/.cache/clyde/hook-url</code> mode 0600 instead)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="sub" style="margin-top: 1.2em;">PR-07 is operationally the most dangerous because it leaks at the moment users are most likely to share their terminal. The hookserver's per-process token is short-lived and loopback-only, but a leaked URL can be replayed by any local process while the session is alive.</p>
+</section>
+
+<!-- ============== SLIDE 6: SUPPLY CHAIN DIAGRAM ============== -->
+<section class="slide" data-slide="6">
+  <h2>Supply chain · current state</h2>
+  <p class="sub">Direct deps minimal and reputable. The risk is in the indirect graph and the redirect hop.</p>
+
+  <svg viewBox="0 0 1200 540" class="sketch" style="width: 100%; max-height: 70vh; margin-top: 8px;">
+    <defs>
+      <marker id="aP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+      <marker id="aP-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#f7768e"/>
+      </marker>
+      <marker id="aP-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#e0af68"/>
+      </marker>
+    </defs>
+
+    <!-- clyde -->
+    <rect class="node-fill stroke" x="40" y="220" width="180" height="100" rx="12"/>
+    <text class="title" x="130" y="255" text-anchor="middle">clyde (go.mod)</text>
+    <text class="note" x="130" y="278" text-anchor="middle">7 direct deps</text>
+    <text class="note" x="130" y="296" text-anchor="middle">16 indirect deps</text>
+
+    <!-- charm.land redirect -->
+    <rect class="node-fill stroke-warn" x="300" y="100" width="220" height="120" rx="12"/>
+    <text class="title warn-text" x="410" y="135" text-anchor="middle">charm.land/*</text>
+    <text class="note warn-text" x="410" y="158" text-anchor="middle">vanity redirect</text>
+    <text class="note warn-text" x="410" y="176" text-anchor="middle">PR-05</text>
+    <text class="note" x="410" y="198" text-anchor="middle">DNS / proxy hop</text>
+
+    <!-- charmbracelet GH -->
+    <rect class="node-fill stroke" x="600" y="60" width="220" height="120" rx="12"/>
+    <text class="title" x="710" y="95" text-anchor="middle">charmbracelet/*</text>
+    <text class="note" x="710" y="118" text-anchor="middle">github.com</text>
+    <text class="note" x="710" y="138" text-anchor="middle">bubbles · bubbletea</text>
+    <text class="note" x="710" y="156" text-anchor="middle">lipgloss · harmonica · ansi</text>
+
+    <!-- pseudo-version cluster -->
+    <rect class="node-fill stroke-bad" x="600" y="240" width="380" height="160" rx="12"/>
+    <text class="title bad-text" x="790" y="275" text-anchor="middle">pseudo-versions (PR-04)</text>
+    <text class="note" x="790" y="300" text-anchor="middle">charmbracelet/ultraviolet v0.0.0-20260416...</text>
+    <text class="note" x="790" y="320" text-anchor="middle">charmbracelet/x/exp/golden v0.0.0-20251109...</text>
+    <text class="note" x="790" y="340" text-anchor="middle">xo/terminfo v0.0.0-20220910...</text>
+    <text class="note" x="790" y="362" text-anchor="middle">golang.org/x/exp v0.0.0-20231006...</text>
+    <text class="note bad-text" x="790" y="386" text-anchor="middle">no SemVer · dependabot doesn't gate</text>
+
+    <!-- direct other -->
+    <rect class="node-fill stroke" x="300" y="280" width="240" height="80" rx="12"/>
+    <text class="title" x="420" y="310" text-anchor="middle">other direct</text>
+    <text class="note" x="420" y="332" text-anchor="middle">BurntSushi/toml · alecthomas/chroma</text>
+
+    <!-- single-maintainer -->
+    <rect class="node-fill stroke-warn" x="40" y="380" width="180" height="100" rx="12"/>
+    <text class="title warn-text" x="130" y="412" text-anchor="middle">single-maintainer</text>
+    <text class="note" x="130" y="434" text-anchor="middle">muesli/cancelreader</text>
+    <text class="note" x="130" y="450" text-anchor="middle">xo/terminfo</text>
+    <text class="note warn-text" x="130" y="470" text-anchor="middle">PR-37 bus factor</text>
+
+    <!-- arrows -->
+    <path class="stroke-warn" d="M 220 250 Q 260 200 300 160" marker-end="url(#aP-warn)"/>
+    <path class="stroke-warn" d="M 520 160 Q 560 130 600 110" marker-end="url(#aP-warn)"/>
+    <path class="stroke" d="M 220 280 L 300 310" marker-end="url(#aP)"/>
+    <path class="stroke-bad" d="M 540 320 L 600 310" marker-end="url(#aP-bad)"/>
+    <path class="stroke" d="M 130 380 L 130 320" marker-end="url(#aP)"/>
+
+    <!-- govulncheck -->
+    <rect class="node-fill stroke-good" x="1020" y="100" width="160" height="80" rx="10"/>
+    <text class="title good-text" x="1100" y="130" text-anchor="middle">govulncheck</text>
+    <text class="note good-text" x="1100" y="150" text-anchor="middle">in CI ✓</text>
+    <text class="note" x="1100" y="170" text-anchor="middle">but @latest install</text>
+
+    <!-- gaps -->
+    <rect class="node-fill stroke-bad" x="1020" y="220" width="160" height="180" rx="10"/>
+    <text class="title bad-text" x="1100" y="250" text-anchor="middle">missing</text>
+    <text class="note bad-text" x="1100" y="275" text-anchor="middle">CodeQL</text>
+    <text class="note bad-text" x="1100" y="295" text-anchor="middle">Semgrep</text>
+    <text class="note bad-text" x="1100" y="315" text-anchor="middle">gosec</text>
+    <text class="note bad-text" x="1100" y="335" text-anchor="middle">SBOM</text>
+    <text class="note bad-text" x="1100" y="355" text-anchor="middle">cosign signing</text>
+    <text class="note bad-text" x="1100" y="375" text-anchor="middle">SLSA provenance</text>
+  </svg>
+</section>
+
+<!-- ============== SLIDE 7: RELEASE PIPELINE PROPOSED ============== -->
+<section class="slide" data-slide="7">
+  <h2>Proposed release pipeline</h2>
+  <p class="sub">Tag <code>v0.1.0</code> → goreleaser builds 5 platforms × signs × generates SBOM × publishes.</p>
+
+  <svg viewBox="0 0 1200 460" class="sketch" style="width: 100%; max-height: 65vh; margin-top: 8px;">
+    <defs>
+      <marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <!-- tag -->
+    <rect class="node-fill stroke" x="40" y="180" width="160" height="100" rx="12"/>
+    <text class="title" x="120" y="215" text-anchor="middle">git tag v0.1.0</text>
+    <text class="note" x="120" y="238" text-anchor="middle">Conventional</text>
+    <text class="note" x="120" y="256" text-anchor="middle">Commits → semver</text>
+
+    <!-- workflow -->
+    <rect class="node-fill stroke-accent" x="260" y="160" width="220" height="140" rx="12"/>
+    <text class="title" x="370" y="195" text-anchor="middle">.github/workflows</text>
+    <text class="title" x="370" y="215" text-anchor="middle">release.yml</text>
+    <text class="note" x="370" y="240" text-anchor="middle">on: push tags v*</text>
+    <text class="note" x="370" y="258" text-anchor="middle">id-token: write</text>
+    <text class="note" x="370" y="276" text-anchor="middle">attestations: write</text>
+
+    <!-- goreleaser -->
+    <rect class="node-fill stroke" x="540" y="60" width="200" height="340" rx="12"/>
+    <text class="title" x="640" y="95" text-anchor="middle">goreleaser</text>
+    <text class="label" x="640" y="125" text-anchor="middle">builds: matrix</text>
+    <text class="note" x="640" y="145" text-anchor="middle">linux/amd64+arm64</text>
+    <text class="note" x="640" y="163" text-anchor="middle">darwin/amd64+arm64</text>
+    <text class="note" x="640" y="181" text-anchor="middle">windows/amd64</text>
+    <text class="label" x="640" y="210" text-anchor="middle">flags</text>
+    <text class="note" x="640" y="228" text-anchor="middle">-trimpath -buildvcs</text>
+    <text class="note" x="640" y="246" text-anchor="middle">CGO_ENABLED=0</text>
+    <text class="label" x="640" y="275" text-anchor="middle">sboms:</text>
+    <text class="note" x="640" y="293" text-anchor="middle">cyclonedx-gomod</text>
+    <text class="label" x="640" y="320" text-anchor="middle">signs:</text>
+    <text class="note" x="640" y="338" text-anchor="middle">cosign keyless</text>
+    <text class="note" x="640" y="356" text-anchor="middle">via OIDC</text>
+    <text class="label" x="640" y="383" text-anchor="middle">brews / scoops</text>
+
+    <!-- artifacts -->
+    <rect class="node-fill stroke-good" x="800" y="60" width="200" height="120" rx="12"/>
+    <text class="title good-text" x="900" y="95" text-anchor="middle">GitHub Release</text>
+    <text class="note" x="900" y="118" text-anchor="middle">5 binaries · checksums</text>
+    <text class="note" x="900" y="136" text-anchor="middle">.sig + .pem cosign</text>
+    <text class="note" x="900" y="154" text-anchor="middle">SBOM CycloneDX</text>
+
+    <rect class="node-fill stroke-good" x="800" y="200" width="200" height="80" rx="12"/>
+    <text class="title good-text" x="900" y="232" text-anchor="middle">attestations</text>
+    <text class="note" x="900" y="252" text-anchor="middle">SLSA L3 provenance</text>
+    <text class="note" x="900" y="268" text-anchor="middle">via OIDC</text>
+
+    <rect class="node-fill stroke-good" x="800" y="300" width="200" height="100" rx="12"/>
+    <text class="title good-text" x="900" y="330" text-anchor="middle">homebrew tap</text>
+    <text class="note" x="900" y="352" text-anchor="middle">Systemartis/homebrew-tap</text>
+    <text class="note" x="900" y="370" text-anchor="middle">brew install</text>
+    <text class="note" x="900" y="386" text-anchor="middle">Systemartis/tap/clyde</text>
+
+    <!-- arrows -->
+    <path class="stroke" d="M 200 230 L 260 230" marker-end="url(#aR)"/>
+    <path class="stroke" d="M 480 230 L 540 230" marker-end="url(#aR)"/>
+    <path class="stroke-good" d="M 740 120 L 800 120" marker-end="url(#aR)"/>
+    <path class="stroke-good" d="M 740 240 L 800 240" marker-end="url(#aR)"/>
+    <path class="stroke-good" d="M 740 350 L 800 350" marker-end="url(#aR)"/>
+
+    <!-- verify -->
+    <rect class="node-fill stroke-accent" x="1040" y="60" width="140" height="340" rx="12"/>
+    <text class="title" x="1110" y="95" text-anchor="middle">user</text>
+    <text class="label" x="1110" y="125" text-anchor="middle">brew install</text>
+    <text class="label" x="1110" y="160" text-anchor="middle">cosign verify-blob</text>
+    <text class="label" x="1110" y="195" text-anchor="middle">slsa-verifier</text>
+    <text class="label" x="1110" y="230" text-anchor="middle">clyde --version</text>
+    <text class="note" x="1110" y="270" text-anchor="middle">version</text>
+    <text class="note" x="1110" y="288" text-anchor="middle">commit SHA</text>
+    <text class="note" x="1110" y="306" text-anchor="middle">build date</text>
+    <text class="note" x="1110" y="324" text-anchor="middle">go runtime</text>
+  </svg>
+</section>
+
+<!-- ============== SLIDE 8: SKILLS INSTALLED ============== -->
+<section class="slide" data-slide="8">
+  <h2>Skills installed under <code>.claude/skills/</code></h2>
+  <p class="sub">Top 7 picks from skills.sh + 1 custom skill, all clyde-tuned to reference real files and the actual trust model.</p>
+
+  <div class="grid-2" style="margin-top: 12px;">
+    <div class="card">
+      <h4>trailofbits/semgrep</h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">★★★★★ · SAST orchestration with Trail of Bits + 0xdea + Decurity rulesets, parallel scan, audit-grade output.</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Clyde lens: hookserver auth, OAuth refresh, exec.Command shellouts (git, ps, security).</p>
+    </div>
+    <div class="card">
+      <h4>trailofbits/supply-chain-risk-auditor</h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">★★★★ · 6-dimension dep audit (single maintainer, unmaintained, low popularity, FFI/deser, past CVEs, missing security contacts).</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Clyde lens: Charm concentration, pseudo-versions, single-maintainer indirects.</p>
+    </div>
+    <div class="card">
+      <h4>github/secret-scanning</h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">★★★★ · Mandatory pre-public hygiene gate. GHAS scanning + push protection + alert-rotation playbook.</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Clyde lens: history sweep before flipping repo public.</p>
+    </div>
+    <div class="card">
+      <h4>github/dependabot</h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">★★★★ · Walks dep manifests, generates <code>.github/dependabot.yml</code>, tunes grouping/scheduling/security policies.</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Clyde lens: review existing config, add <code>groups:</code> to reduce PR noise.</p>
+    </div>
+    <div class="card">
+      <h4>composiohq/changelog-generator</h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">★★★★ · Bootstraps <code>CHANGELOG.md</code> from history, groups by Features/Improvements/Fixes/Breaking/Security.</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Clyde lens: backfill v0.1.0 entry, drive <code>gh release create</code> body.</p>
+    </div>
+    <div class="card">
+      <h4>boristane/logging-best-practices</h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">★★★★ · Wide-events / canonical-log-line model, JSON-only, two levels (info/error). Cites Stripe canonical log lines.</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Clyde lens: <code>slog</code> JSON file at <code>$XDG_STATE_HOME/clyde/clyde.log</code>, redactor wrapper for tokens/paths.</p>
+    </div>
+    <div class="card">
+      <h4>github/gh-cli</h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">★★★ · Execution layer: <code>gh release create / upload / verify</code>.</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Clyde lens: <code>RELEASE.md</code> runbook, post-release smoke test.</p>
+    </div>
+    <div class="card" style="background: rgba(122,162,247,0.12); border: 1px solid var(--accent);">
+      <h4>clyde-release-ritual <span class="pill accent">custom</span></h4>
+      <p class="sub" style="font-size: .82rem; margin: .2em 0 .5em 0;">Captures the launch checklist as a single skill so future releases follow the same ordered ritual.</p>
+      <p class="sub" style="font-size: .82rem; color: var(--accent-2);">Combines version-bump → CHANGELOG cut → tag → workflow → smoke → tap update.</p>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top: 1em;">Cited but not installed (overlap or scope): <code>trailofbits/codeql</code>, <code>trailofbits/differential-review</code>, <code>trailofbits/variant-analysis</code>, <code>marcelorodrigo/conventional-commit</code>, <code>openai/security-ownership-map</code>, <code>sickn33/test-automator</code>. Each documented in PRODUCTION-READINESS.md §3.2.</p>
+</section>
+
+<!-- ============== SLIDE 9: GAPS IN SKILLS.SH ============== -->
+<section class="slide" data-slide="9">
+  <h2>Honest assessment: gaps in skills.sh</h2>
+  <p class="sub">8 catalog agents converged on the same blind spots. Where skills.sh has nothing, we reference upstream docs in the plan.</p>
+
+  <table>
+    <thead><tr><th>Topic</th><th>Best skills.sh hit</th><th>Authoritative source</th></tr></thead>
+    <tbody>
+      <tr><td><strong>goreleaser</strong></td><td>(none)</td><td><a href="https://goreleaser.com">goreleaser.com</a></td></tr>
+      <tr><td><strong>SBOM (CycloneDX/SPDX)</strong></td><td>(none, only OWASP A06 mention)</td><td><code>cyclonedx-gomod</code>, <code>syft</code></td></tr>
+      <tr><td><strong>cosign keyless signing</strong></td><td>(none)</td><td><a href="https://sigstore.dev">sigstore.dev</a></td></tr>
+      <tr><td><strong>SLSA provenance</strong></td><td>(none)</td><td><code>actions/attest-build-provenance</code></td></tr>
+      <tr><td><strong>GitHub Actions hardening</strong></td><td>openai/security-ownership-map (CODEOWNERS only)</td><td>OpenSSF Scorecard, <code>zizmor</code></td></tr>
+      <tr><td><strong>Go log/slog</strong></td><td>boristane/logging-best-practices (language-agnostic)</td><td><code>pkg.go.dev/log/slog</code></td></tr>
+      <tr><td><strong>Bubble Tea / TUI testing</strong></td><td>(none)</td><td><code>charm.land/teatest</code> docs</td></tr>
+      <tr><td><strong>Go performance / pprof</strong></td><td>jeffallan/golang-pro (workflow only, no commands)</td><td><code>pkg.go.dev/runtime/pprof</code>, benchstat</td></tr>
+      <tr><td><strong>Homebrew tap automation</strong></td><td>(none)</td><td>goreleaser <code>brews:</code> block</td></tr>
+      <tr><td><strong>DCO / CLA enforcement</strong></td><td>(none)</td><td>github.com/apps/dco</td></tr>
+    </tbody>
+  </table>
+
+  <p class="sub" style="margin-top: 1.2em;">This isn't a flaw in our process — it's a real catalog limitation worth documenting. The Go OSS supply-chain story lives outside skills.sh today; the plan tasks pin authoritative URLs for each missing skill.</p>
+</section>
+
+<!-- ============== SLIDE 10: PHASED PLAN ============== -->
+<section class="slide" data-slide="10">
+  <h2>Sequenced plan · 7 phases</h2>
+  <p class="sub">Phases 1-4 are launch-blocking. Phase 5+ elevates to "polished public launch." Each phase is a separately-mergeable cluster of PRs.</p>
+
+  <table>
+    <thead><tr><th>Phase</th><th>Theme</th><th>Findings</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="phase">0</span></td>
+        <td>Master analysis prerequisites</td>
+        <td>F-01..F-09 + PR-36</td>
+        <td>existing plan</td>
+      </tr>
+      <tr>
+        <td><span class="phase">1</span></td>
+        <td>Day-1 must-fixes</td>
+        <td>PR-01 PR-03 PR-07 PR-14</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span class="phase phase-2">2</span></td>
+        <td>Release infrastructure</td>
+        <td>PR-02 PR-06 PR-08 PR-09 PR-10 PR-11 PR-12 PR-13</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span class="phase phase-3">3</span></td>
+        <td>CI hardening</td>
+        <td>PR-19 PR-20 PR-21 PR-27 PR-28 PR-29 PR-38</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span class="phase phase-4">4</span></td>
+        <td>Supply chain — SBOM + signing + SAST</td>
+        <td>PR-04 PR-05 PR-16 PR-17 PR-30 PR-37</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span class="phase phase-5">5</span></td>
+        <td>Observability — slog + crash-report</td>
+        <td>PR-15 PR-24 PR-25 PR-26</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span class="phase phase-6">6</span></td>
+        <td>Test depth</td>
+        <td>PR-18 PR-22 PR-23</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>(deferred — separate plan)</td>
+        <td>PR-31..PR-35</td>
+        <td>L</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="sub" style="margin-top: 1.2em;">Plan file: <code>plans/2026-05-05-production-readiness.md</code>. Each phase includes TDD-shaped tasks with file paths, exact commands, and verification commands.</p>
+</section>
+
+<!-- ============== SLIDE 11: WHAT LANDS ON THIS BRANCH ============== -->
+<section class="slide" data-slide="11">
+  <h2>What lands on <code>chore/production-readiness</code></h2>
+
+  <h3>New artifacts</h3>
+  <pre><code>analysis/PRODUCTION-READINESS.md           ← consolidated 38-finding report
+analysis/production-readiness.html         ← this deck
+analysis/diagrams/release-pipeline.excalidraw
+analysis/diagrams/supply-chain.excalidraw
+.claude/skills/trailofbits-semgrep/SKILL.md
+.claude/skills/supply-chain-risk-auditor/SKILL.md
+.claude/skills/secret-scanning/SKILL.md
+.claude/skills/dependabot-tuning/SKILL.md
+.claude/skills/changelog-generator/SKILL.md
+.claude/skills/logging-best-practices/SKILL.md
+.claude/skills/gh-cli/SKILL.md
+.claude/skills/clyde-release-ritual/SKILL.md  ← custom
+plans/2026-05-05-production-readiness.md   ← sequenced plan</code></pre>
+
+  <h3>Untouched (intentionally)</h3>
+  <pre><code>internal/**         (no behavior changes — analysis-only branch)
+.golangci.yml       (F-02 fix is in the prior master-analysis plan)
+LICENSE             (PR-03 fix lands in Phase 1 of THIS plan, in its own PR)
+SECURITY.md         (extended in Phase 4; not on this branch)</code></pre>
+
+  <p class="sub" style="margin-top: 1.4em;">All 11 skills now in <code>.claude/skills/</code> (4 from prior pass + 7 from this pass, plus 1 custom). Future agent sessions auto-load all of them.</p>
+</section>
+
+<!-- ============== SLIDE 12: CLOSE ============== -->
+<section class="slide" data-slide="12">
+  <div style="margin: auto; text-align: center;">
+    <h1 style="font-size: 2.4rem;">Ready to ship.</h1>
+    <p class="sub" style="margin-top: .4em;">38 findings · 7 phases · 8 skills installed · 1 plan.</p>
+    <p class="hand" style="font-size: 1.6rem; color: var(--accent); margin-top: 1.2em;">Phase 1 first. Tag <code>v0.1.0</code> after Phase 2.</p>
+    <p class="sub" style="margin-top: 4em; font-size: .8rem;">
+      <span class="key">←</span> revisit · <span class="key">Esc</span> overview · refresh restarts
+    </p>
+  </div>
+</section>
+
+</div>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous">←</button>
+  <span class="counter"><span id="cur">1</span> / <span id="total">12</span></span>
+  <button id="next" aria-label="Next">→</button>
+</div>
+
+<script>
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let cur = 0;
+  document.getElementById('total').textContent = total;
+  function show(n) {
+    cur = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === cur));
+    document.getElementById('cur').textContent = cur + 1;
+    history.replaceState(null, '', '#' + (cur + 1));
+  }
+  function fromHash() {
+    const h = parseInt(location.hash.replace('#', ''), 10);
+    if (!isNaN(h) && h >= 1 && h <= total) show(h - 1); else show(0);
+  }
+  document.getElementById('next').onclick = () => show(cur + 1);
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { show(cur + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { show(cur - 1); e.preventDefault(); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(total - 1);
+    else if (/^[0-9]$/.test(e.key)) { const n = parseInt(e.key, 10) || 10; show(n - 1); }
+  });
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+
+</body>
+</html>
