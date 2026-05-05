@@ -1,7 +1,7 @@
 package git
 
 import (
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // LiveSessionAdapter wraps Source and implements livesession.GitSource.

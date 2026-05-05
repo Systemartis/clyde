@@ -4,8 +4,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/session"
 )
 
 // SessionTab is one tab rendered in the title-bar tab strip. Tabs cover

@@ -81,11 +81,11 @@ func TestViewerOverflow_GoFileTabs(t *testing.T) {
 		"\t\"fmt\"\n" +
 		"\t\"os\"\n\n" +
 		"\ttea \"charm.land/bubbletea/v2\"\n\n" +
-		"\t\"github.com/clyde-tui/clyde/internal/adapters/anthropicapi\"\n" +
-		"\t\"github.com/clyde-tui/clyde/internal/adapters/fsexplorer\"\n" +
-		"\tgitadapter \"github.com/clyde-tui/clyde/internal/adapters/git\"\n" +
-		"\t\"github.com/clyde-tui/clyde/internal/adapters/hookserver\"\n" +
-		"\t\"github.com/clyde-tui/clyde/internal/adapters/jsonl\"\n" +
+		"\t\"github.com/Systemartis/clyde/internal/adapters/anthropicapi\"\n" +
+		"\t\"github.com/Systemartis/clyde/internal/adapters/fsexplorer\"\n" +
+		"\tgitadapter \"github.com/Systemartis/clyde/internal/adapters/git\"\n" +
+		"\t\"github.com/Systemartis/clyde/internal/adapters/hookserver\"\n" +
+		"\t\"github.com/Systemartis/clyde/internal/adapters/jsonl\"\n" +
 		")\n"
 	mockFileContent["fixture_main.go"] = content
 	defer delete(mockFileContent, "fixture_main.go")

@@ -44,10 +44,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/session"
-	"github.com/clyde-tui/clyde/internal/domain/usage"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // scannerMaxToken is the maximum JSONL line size we will attempt to decode.

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // Client implements ports.PlanUsageSource by combining:

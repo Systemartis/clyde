@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/usage"
 )
 
 // TestNowStatus_ThinkingHasNoDuplicatedFields is the regression for the

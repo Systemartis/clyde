@@ -8,8 +8,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/clyde-tui/clyde/internal/adapters/hookserver"
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/adapters/hookserver"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // snapshotCmd returns a tea.Cmd that loads the next live snapshot.

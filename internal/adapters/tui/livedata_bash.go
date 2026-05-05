@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // deriveBashLog converts the live session's chronological Bash ToolCall list

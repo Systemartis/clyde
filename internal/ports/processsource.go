@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/clyde-tui/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/domain/session"
 )
 
 // ProcessSource is an optional port for detecting running `claude` CLI

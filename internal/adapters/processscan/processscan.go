@@ -36,7 +36,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/domain/session"
 )
 
 // processCacheTTL bounds how often we shell out to `ps -axo command=`.

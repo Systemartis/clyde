@@ -18,19 +18,19 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/clyde-tui/clyde/internal/adapters/anthropicapi"
-	"github.com/clyde-tui/clyde/internal/adapters/claudesettings"
-	"github.com/clyde-tui/clyde/internal/adapters/fsexplorer"
-	gitadapter "github.com/clyde-tui/clyde/internal/adapters/git"
-	"github.com/clyde-tui/clyde/internal/adapters/hookserver"
-	"github.com/clyde-tui/clyde/internal/adapters/jsonl"
-	"github.com/clyde-tui/clyde/internal/adapters/lspscan"
-	"github.com/clyde-tui/clyde/internal/adapters/mcpconfig"
-	"github.com/clyde-tui/clyde/internal/adapters/processscan"
-	"github.com/clyde-tui/clyde/internal/adapters/systemclock"
-	"github.com/clyde-tui/clyde/internal/adapters/tui"
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/project"
+	"github.com/Systemartis/clyde/internal/adapters/anthropicapi"
+	"github.com/Systemartis/clyde/internal/adapters/claudesettings"
+	"github.com/Systemartis/clyde/internal/adapters/fsexplorer"
+	gitadapter "github.com/Systemartis/clyde/internal/adapters/git"
+	"github.com/Systemartis/clyde/internal/adapters/hookserver"
+	"github.com/Systemartis/clyde/internal/adapters/jsonl"
+	"github.com/Systemartis/clyde/internal/adapters/lspscan"
+	"github.com/Systemartis/clyde/internal/adapters/mcpconfig"
+	"github.com/Systemartis/clyde/internal/adapters/processscan"
+	"github.com/Systemartis/clyde/internal/adapters/systemclock"
+	"github.com/Systemartis/clyde/internal/adapters/tui"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/project"
 )
 
 func main() {

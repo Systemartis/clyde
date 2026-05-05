@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // cleanMCPName trims the "@source" suffix Claude Code uses to qualify MCP

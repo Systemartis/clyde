@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/adapters/git"
+	"github.com/Systemartis/clyde/internal/adapters/git"
 )
 
 // ─── parseDiff (via Diff on a real tempdir) ───────────────────────────────────

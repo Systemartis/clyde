@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // deriveDiffLabel builds the "filename · +N −M" label for the diff panel header.

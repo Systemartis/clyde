@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/adapters/claudesettings"
+	"github.com/Systemartis/clyde/internal/adapters/claudesettings"
 )
 
 // TestLSPs_StableSorting verifies the result is sorted alphabetically by

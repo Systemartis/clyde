@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/event"
 )
 
 // SubagentInfo describes a single subagent that ran under a parent session.

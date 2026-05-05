@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/adapters/hookserver"
+	"github.com/Systemartis/clyde/internal/adapters/hookserver"
 )
 
 // newTestServer starts a Server and returns it with a cancel function.

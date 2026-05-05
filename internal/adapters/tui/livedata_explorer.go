@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/clyde-tui/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/application/livesession"
 )
 
 // deriveExplorerData converts the LiveSession view's FileTree and ModifiedFiles

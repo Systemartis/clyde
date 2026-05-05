@@ -6,9 +6,9 @@ import (
 	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/clyde-tui/clyde/internal/adapters/hookserver"
-	"github.com/clyde-tui/clyde/internal/application/livesession"
-	"github.com/clyde-tui/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/adapters/hookserver"
+	"github.com/Systemartis/clyde/internal/application/livesession"
+	"github.com/Systemartis/clyde/internal/domain/event"
 )
 
 // Update implements tea.Model.

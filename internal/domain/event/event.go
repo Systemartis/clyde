@@ -8,7 +8,7 @@ package event
 import (
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/domain/usage"
 )
 
 // Kind identifies the category of activity recorded by an Event.

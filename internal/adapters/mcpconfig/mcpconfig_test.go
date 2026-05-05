@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/clyde-tui/clyde/internal/adapters/claudesettings"
-	"github.com/clyde-tui/clyde/internal/adapters/mcpconfig"
+	"github.com/Systemartis/clyde/internal/adapters/claudesettings"
+	"github.com/Systemartis/clyde/internal/adapters/mcpconfig"
 )
 
 func TestSource_MCPs_fixture(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/pricing"
-	"github.com/clyde-tui/clyde/internal/domain/usage"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/domain/pricing"
+	"github.com/Systemartis/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // QuotaNotification carries a derived plan-quota or cost alert.

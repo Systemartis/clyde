@@ -22,12 +22,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/domain/pricing"
-	"github.com/clyde-tui/clyde/internal/domain/project"
-	"github.com/clyde-tui/clyde/internal/domain/session"
-	"github.com/clyde-tui/clyde/internal/domain/usage"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/pricing"
+	"github.com/Systemartis/clyde/internal/domain/project"
+	"github.com/Systemartis/clyde/internal/domain/session"
+	"github.com/Systemartis/clyde/internal/domain/usage"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // ToolCall is a single tool invocation extracted from an AgentTimeline.

@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
-	"github.com/clyde-tui/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/ports"
 )
 
 // agentMeta is the shape of agent-<id>.meta.json files.

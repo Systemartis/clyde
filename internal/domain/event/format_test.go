@@ -6,7 +6,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/clyde-tui/clyde/internal/domain/event"
+	"github.com/Systemartis/clyde/internal/domain/event"
 )
 
 // TestTruncate_RuneCountLimit verifies that strings at or below maxRunes are
