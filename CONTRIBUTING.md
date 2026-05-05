@@ -1,6 +1,6 @@
 # Contributing to Clyde
 
-Thanks for considering a contribution! Clyde is a small, focused TUI and I'd love hearing from people who use it. Whether you're filing a bug, suggesting an idea, or sending a patch, you're welcome here.
+Thanks for considering a contribution! Clyde is a small, focused TUI and we'd love hearing from people who use it. Whether you're filing a bug, suggesting an idea, or sending a patch, you're welcome here.
 
 ## Code of conduct
 
