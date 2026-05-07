@@ -28,6 +28,9 @@ cover: ## Coverage profile
 	$(GO) test -cover -coverprofile=coverage.out ./...
 	$(GO) tool cover -func=coverage.out | tail -5
 
+bench: ## Run benchmarks (no test phase)
+	$(GO) test -bench=. -benchmem -run=^$$ -benchtime=1s ./...
+
 lint: ## golangci-lint (matches CI version pin in .github/workflows/ci.yml)
 	$(GOLANGCI_LINT) run ./...
 
