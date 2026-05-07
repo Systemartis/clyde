@@ -14,6 +14,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -21,6 +22,7 @@ import (
 
 	"github.com/Systemartis/clyde/internal/adapters/anthropicapi"
 	"github.com/Systemartis/clyde/internal/adapters/claudesettings"
+	"github.com/Systemartis/clyde/internal/adapters/clydelog"
 	"github.com/Systemartis/clyde/internal/adapters/fsexplorer"
 	gitadapter "github.com/Systemartis/clyde/internal/adapters/git"
 	"github.com/Systemartis/clyde/internal/adapters/hookserver"
@@ -63,6 +65,18 @@ func run() int {
 		fmt.Printf("go:     %s\n", info.GoVersion)
 		return 0
 	}
+
+	// Initialize structured logging before any adapter is constructed so
+	// startup events land in the log file. clydelog falls back to discard
+	// when the log path can't be opened, so this is always safe.
+	logPath, logCloser, logErr := clydelog.Setup()
+	defer func() { _ = logCloser.Close() }()
+	if logErr != nil {
+		fmt.Fprintf(os.Stderr, "clyde: log setup: %v (continuing without file logging)\n", logErr)
+	} else {
+		fmt.Fprintf(os.Stderr, "clyde: logs at %s (set CLYDE_DEBUG=1 for verbose)\n", logPath)
+	}
+	slog.Info("clyde starting", slog.String("version", version.Info().Version))
 
 	// Validate source flag — only "claude" is implemented; warn on others.
 	switch sourceFlag {

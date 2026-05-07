@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -243,6 +244,10 @@ func (s *Server) handleHook(w http.ResponseWriter, r *http.Request) {
 	select {
 	case s.events <- evt:
 	default:
+		slog.Warn("hookserver: events channel full — denying",
+			slog.String("tool", req.Tool),
+			slog.String("hook_type", req.HookType),
+		)
 		writeDeny(w, "clyde busy — re-run the tool to retry")
 		return
 	}
@@ -250,9 +255,18 @@ func (s *Server) handleHook(w http.ResponseWriter, r *http.Request) {
 	// Wait for the consumer's decision.
 	resp, ok := <-evt.ResponseCh
 	if !ok || resp.Allow {
+		slog.Debug("hookserver: allow",
+			slog.String("tool", req.Tool),
+			slog.String("hook_type", req.HookType),
+		)
 		writeAllow(w)
 		return
 	}
+	slog.Info("hookserver: deny",
+		slog.String("tool", req.Tool),
+		slog.String("hook_type", req.HookType),
+		slog.String("reason", resp.Reason),
+	)
 	writeDeny(w, resp.Reason)
 }
 
