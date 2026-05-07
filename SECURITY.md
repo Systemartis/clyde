@@ -46,3 +46,5 @@ Each tagged release ships:
   ```
 
 If `cosign verify-blob` fails or `sha256sum -c checksums.txt` doesn't match, **do not run the binary** — the release was tampered with after publication.
+
+For the full supply-chain documentation (build pipeline, what's pinned, what isn't reproducible yet, SBOM consumption recipes), see [SUPPLY_CHAIN.md](./SUPPLY_CHAIN.md).
