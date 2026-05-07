@@ -39,17 +39,17 @@ jobs:
       security-events: write   # SARIF upload
       actions: read            # CodeQL reads workflow metadata
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: '1.26'
           cache: true
 
       - name: init codeql
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@53e96ec3b35fce51c141c0d6f0e31028a448722d # v3
         with:
           languages: go
           queries: security-and-quality
@@ -58,6 +58,6 @@ jobs:
         run: go build ./...
 
       - name: analyze
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@53e96ec3b35fce51c141c0d6f0e31028a448722d # v3
         with:
           category: "/language:go"
