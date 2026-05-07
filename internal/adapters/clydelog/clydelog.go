@@ -68,7 +68,12 @@ func Setup() (path string, closer io.Closer, err error) {
 	})
 	slog.SetDefault(slog.New(handler))
 
-	slog.Info("clydelog: ready",
+	// G706: gosec flags this because `path` is partially derived from
+	// $XDG_CACHE_HOME / $CLYDE_LOG_FILE. slog with structured attrs is
+	// not vulnerable to log injection — the attrs are JSON-encoded by the
+	// handler, not interpolated into a format string. The env vars are
+	// the user's own anyway.
+	slog.Info("clydelog: ready", //nolint:gosec // see comment
 		slog.String("path", path),
 		slog.String("level", level.String()),
 		slog.Bool("debug_env", os.Getenv("CLYDE_DEBUG") != ""),
