@@ -33,7 +33,23 @@ jobs:
           cache: true
 
       - name: go test
-        run: go test -race -cover ./...
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: coverage threshold gate (≥65%)
+        # Read total coverage from the profile and fail the build if it drops
+        # below the floor. Today (2026-05-07) we're at ~68%; the gate protects
+        # against silent regressions when new untested code lands. Bump the
+        # floor when the project clears the next round number for a sustained
+        # period.
+        run: |
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          echo "total coverage: ${total}%"
+          floor=65.0
+          # awk handles float comparison in a portable way (bash can't).
+          if awk -v t="$total" -v f="$floor" 'BEGIN { exit !(t < f) }'; then
+            echo "::error::coverage ${total}% is below floor ${floor}%"
+            exit 1
+          fi
 
   lint:
     name: lint
