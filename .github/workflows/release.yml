@@ -21,9 +21,10 @@ jobs:
     name: goreleaser
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # required to create the GitHub release
-      packages: write   # leaves room for future container/registry pushes
-      id-token: write   # required by sigstore cosign keyless signing
+      contents: write       # required to create the GitHub release
+      packages: write       # leaves room for future container/registry pushes
+      id-token: write       # required by sigstore cosign keyless signing
+      attestations: write   # SLSA build-provenance attestations
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -55,3 +56,19 @@ jobs:
           # Required by `cosign sign-blob` keyless mode — Fulcio uses the
           # OIDC token to issue the signing certificate.
           COSIGN_YES: "true"
+
+      # SLSA build provenance (in-toto attestation) for every archive
+      # goreleaser produced. GitHub generates and stores the attestation in
+      # the repo's /attestations endpoint — verifiable via:
+      #
+      #   gh attestation verify clyde_<v>_<os>_<arch>.tar.gz \
+      #       --owner Systemartis
+      #
+      # This complements cosign's signature on checksums.txt: cosign proves
+      # the manifest's authenticity, the attestation proves each binary was
+      # built by this exact workflow on this exact tag (SLSA Level 3 provenance
+      # level when running on the GitHub-hosted ubuntu runner).
+      - name: attest build provenance
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: 'dist/clyde_*_*.tar.gz'
