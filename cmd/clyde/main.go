@@ -228,11 +228,17 @@ func writeHookURLFile(url string) (string, error) {
 		cacheHome = filepath.Join(home, ".cache")
 	}
 	dir := filepath.Join(cacheHome, "clyde")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	// G703: dir is built from $XDG_CACHE_HOME + "clyde". See the matching
+	// comment on os.WriteFile below for the full rationale.
+	if err := os.MkdirAll(dir, 0o700); err != nil { //nolint:gosec // see comment
 		return "", fmt.Errorf("mkdir %s: %w", dir, err)
 	}
+	// G703: path is built entirely from $XDG_CACHE_HOME (env-controlled by
+	// the user's own shell) plus the hard-coded suffix "clyde/hook-url".
+	// The fact that an env var influences the path is the whole point — we
+	// honor XDG so users with a non-default cache home aren't surprised.
 	path := filepath.Join(dir, "hook-url")
-	if err := os.WriteFile(path, []byte(url+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(url+"\n"), 0o600); err != nil { //nolint:gosec // see comment
 		return "", fmt.Errorf("write %s: %w", path, err)
 	}
 	return path, nil

@@ -356,7 +356,11 @@ func (s *Source) findSessionFile(sessionID string) (string, error) {
 // subsequent duplicates are silently dropped.  Non-assistant events are never
 // deduplicated — they have unique UUIDs and represent real activity.
 func (s *Source) decodeFile(path string) ([]event.Event, error) {
-	f, err := os.Open(path)
+	// G304: path is built internally from the configured Claude projects
+	// directory + a directory listing — it never originates from untrusted
+	// network input. Reading session files Claude Code writes locally is
+	// the entire purpose of this adapter.
+	f, err := os.Open(path) //nolint:gosec // see comment
 	if err != nil {
 		return nil, fmt.Errorf("jsonl: events: open %s: %w", path, err)
 	}

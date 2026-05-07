@@ -30,6 +30,7 @@ linters:
     - depguard
     - nakedret
     - dupl
+    - gosec
 
   settings:
     depguard:
@@ -107,7 +108,9 @@ linters:
     rules:
       # Test files: relax structural and complexity checks — test functions are
       # allowed to be verbose/repetitive, and British spellings in comments
-      # inside tests don't affect production correctness.
+      # inside tests don't affect production correctness. gosec is also off
+      # for tests: temp-dir 0755, ad-hoc HTTP, and exec.Command with caller-
+      # supplied args are expected patterns in test fixtures.
       - path: _test\.go
         linters:
           - dupl
@@ -115,6 +118,7 @@ linters:
           - gocognit
           - errcheck
           - misspell
+          - gosec
 
       # TUI adapter package: keyboard/mouse handlers, renderers, and viewers
       # are event-dispatch state machines. The named files below are

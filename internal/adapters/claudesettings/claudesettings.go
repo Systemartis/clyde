@@ -81,7 +81,9 @@ func (r *Reader) Read() Settings {
 		return r.cache
 	}
 
-	data, err := os.ReadFile(path)
+	// G304: path is the canonical ~/.claude/settings.json that Claude Code
+	// itself writes; reading it is the entire purpose of this adapter.
+	data, err := os.ReadFile(path) //nolint:gosec // see comment
 	if err != nil {
 		return Settings{}
 	}

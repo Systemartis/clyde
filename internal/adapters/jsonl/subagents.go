@@ -55,9 +55,11 @@ func (s *Source) Subagents(_ context.Context, projectCWD, parentSessionID string
 		agentID := strings.TrimSuffix(name, ".jsonl")
 
 		// Best-effort: read the meta.json side-car if it exists.
+		// G304: metaPath is derived from the Claude subagent directory we
+		// were configured with + the agent's own filename. Not user input.
 		var meta agentMeta
 		metaPath := filepath.Join(dir, agentID+".meta.json")
-		if raw, err := os.ReadFile(metaPath); err == nil {
+		if raw, err := os.ReadFile(metaPath); err == nil { //nolint:gosec // see comment
 			_ = json.Unmarshal(raw, &meta)
 		}
 
