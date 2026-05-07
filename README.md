@@ -116,6 +116,16 @@ Found a vulnerability? Please **don't** open a public issue. See [SECURITY.md](S
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the local-dev setup, the strict-TDD requirement, and the conventional-commits + branch-naming rules.
 
+## Governance
+
+[GOVERNANCE.md](GOVERNANCE.md) describes how decisions get made and who holds the keys; [MAINTAINERS.md](MAINTAINERS.md) lists the current crew.
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE).
+
+## Trademarks
+
+**Clyde** and the visual identity are trademarks of [Systemartis](https://systemartis.com). The Apache 2.0 license covers the source code; it does not grant rights to the name or branding. Forks are welcome — please pick a different name.
+
+**Claude** and **Claude Code** are trademarks of [Anthropic, PBC](https://www.anthropic.com). This project is not affiliated with, endorsed by, or sponsored by Anthropic. Clyde is a third-party companion that reads files Claude Code writes locally; it is not a client of any Anthropic API on its own (the optional plan-usage check uses the same credentials Claude Code already wrote to your Keychain).
