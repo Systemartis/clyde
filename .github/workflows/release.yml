@@ -7,24 +7,32 @@ on:
     tags:
       - 'v*'
 
+# Default-deny — the release job below explicitly grants what it needs.
 permissions:
-  contents: write   # required to create the GitHub release
-  packages: write   # leaves room for future container/registry pushes
-  id-token: write   # required by some attestation/signing flows (sigstore, etc.)
+  contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+# A second tag push for the same ref shouldn't run goreleaser twice.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   goreleaser:
     name: goreleaser
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to create the GitHub release
+      packages: write   # leaves room for future container/registry pushes
+      id-token: write   # required by sigstore cosign keyless signing
     steps:
       - uses: actions/checkout@v6
         with:
           # goreleaser walks the full tag history to compute the changelog;
           # the default shallow clone breaks that.
           fetch-depth: 0
+          # The release job pushes via GITHUB_TOKEN it sets in env, not the
+          # persisted credential — drop the helper to shrink the blast radius.
+          persist-credentials: false
 
       - uses: actions/setup-go@v6
         with:

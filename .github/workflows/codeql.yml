@@ -15,13 +15,14 @@ on:
     # our last commit touched a vulnerable code path.
     - cron: '23 5 * * 1'
 
+# Default-deny at workflow level. The analyze job re-grants security-events
+# write so it can upload SARIF.
 permissions:
   contents: read
-  security-events: write
-  actions: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   analyze:
@@ -33,8 +34,14 @@ jobs:
     if: github.event.repository.private == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write   # SARIF upload
+      actions: read            # CodeQL reads workflow metadata
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@v6
         with:

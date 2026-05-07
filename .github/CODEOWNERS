@@ -1,0 +1,21 @@
+# CODEOWNERS — auto-assigns reviewers on PRs.
+# Syntax: <pattern> <owner> [<owner>...]
+# Owners must have write access to the repo.
+
+# Default owner — everything not otherwise listed.
+*       @vladpb
+
+# Workflow / CI / supply-chain config — extra eyes here because mistakes
+# leak secrets or pin to compromised actions.
+/.github/                    @vladpb
+/.goreleaser.yml             @vladpb
+
+# Security-sensitive code paths.
+/cmd/clyde/                  @vladpb
+/internal/adapters/hookserver/   @vladpb
+/internal/adapters/anthropicapi/ @vladpb
+
+# Documentation that's part of the public/OSS surface.
+/SECURITY.md                 @vladpb
+/LICENSE                     @vladpb
+/README.md                   @vladpb
