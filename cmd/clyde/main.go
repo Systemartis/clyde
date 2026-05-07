@@ -11,12 +11,18 @@
 package main
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -46,24 +52,22 @@ func run() int {
 	var demoFlag bool
 	var sourceFlag string
 	var versionFlag bool
+	var crashReportFlag bool
 
 	flag.StringVar(&layoutFlag, "layout", "", "layout mode override: stack, tabs, multi-col")
 	flag.BoolVar(&demoFlag, "demo", false, "use mock data instead of live Claude Code data")
 	flag.StringVar(&sourceFlag, "source", "claude", "LLM source adapter: claude (default; gemini/codex/kimi are V21+)")
 	flag.BoolVar(&versionFlag, "version", false, "print version and exit")
+	flag.BoolVar(&crashReportFlag, "crash-report", false, "bundle log + version + env into a tarball for bug reports and exit")
 	flag.Parse()
 
 	if versionFlag {
-		info := version.Info()
-		fmt.Printf("clyde %s\n", info.Version)
-		if info.Commit != "" {
-			fmt.Printf("commit: %s\n", info.Commit)
-		}
-		if info.Date != "" {
-			fmt.Printf("built:  %s\n", info.Date)
-		}
-		fmt.Printf("go:     %s\n", info.GoVersion)
+		printVersion()
 		return 0
+	}
+
+	if crashReportFlag {
+		return runCrashReport()
 	}
 
 	// Initialize structured logging before any adapter is constructed so
@@ -221,6 +225,128 @@ func run() int {
 		return 1
 	}
 	return 0
+}
+
+// printVersion writes the version block to stdout in the same format the
+// pre-existing tests expect. Extracted from run() so the cyclomatic
+// complexity doesn't keep climbing as flags are added.
+func printVersion() {
+	info := version.Info()
+	fmt.Printf("clyde %s\n", info.Version)
+	if info.Commit != "" {
+		fmt.Printf("commit: %s\n", info.Commit)
+	}
+	if info.Date != "" {
+		fmt.Printf("built:  %s\n", info.Date)
+	}
+	fmt.Printf("go:     %s\n", info.GoVersion)
+}
+
+// runCrashReport drives the --crash-report flag end-to-end and returns the
+// process exit code so run() can stay flat.
+func runCrashReport() int {
+	path, err := writeCrashReport()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "clyde: crash-report: %v\n", err)
+		return 1
+	}
+	fmt.Printf("crash report written to %s\n", path)
+	fmt.Println("attach this file to your bug report — it contains:")
+	fmt.Println("  - the recent log (~/.cache/clyde/clyde.log)")
+	fmt.Println("  - clyde --version output")
+	fmt.Println("  - OS / arch / Go runtime / TERM env summary")
+	return 0
+}
+
+// writeCrashReport bundles diagnostics into a tar.gz that users can attach
+// to a bug report. Contents:
+//   - report.txt: clyde --version output + OS/arch/Go/TERM summary
+//   - clyde.log:  the contents of the active log file (if any)
+//
+// The path is `~/clyde-crash-<timestamp>.tar.gz` (no $XDG_DATA — these go
+// where users will see them and pick them up). If $HOME isn't writable
+// the tarball lands in $TMPDIR.
+func writeCrashReport() (string, error) {
+	stamp := time.Now().UTC().Format("20060102-150405")
+	name := fmt.Sprintf("clyde-crash-%s.tar.gz", stamp)
+	dir, err := os.UserHomeDir()
+	if err != nil || dir == "" {
+		dir = os.TempDir()
+	}
+	path := filepath.Join(dir, name)
+	// G304: dir is the user's own home (or tempdir); name is built from a
+	// timestamp. No external input.
+	out, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) //nolint:gosec // see comment
+	if err != nil {
+		return "", fmt.Errorf("create %s: %w", path, err)
+	}
+	defer func() { _ = out.Close() }()
+
+	gz := gzip.NewWriter(out)
+	defer func() { _ = gz.Close() }()
+	tw := tar.NewWriter(gz)
+	defer func() { _ = tw.Close() }()
+
+	report := buildCrashReportText()
+	if err := writeTarFile(tw, "report.txt", []byte(report)); err != nil {
+		return "", err
+	}
+
+	// Best-effort log inclusion — absence of a log file is not an error
+	// (the user may never have run clyde in normal mode yet).
+	logPath := os.Getenv("CLYDE_LOG_FILE")
+	if logPath == "" {
+		cacheHome := os.Getenv("XDG_CACHE_HOME")
+		if cacheHome == "" {
+			home, herr := os.UserHomeDir()
+			if herr == nil {
+				cacheHome = filepath.Join(home, ".cache")
+			}
+		}
+		if cacheHome != "" {
+			logPath = filepath.Join(cacheHome, "clyde", "clyde.log")
+		}
+	}
+	if logPath != "" {
+		// G304: logPath comes from the same XDG resolution clydelog uses.
+		raw, rerr := os.ReadFile(logPath) //nolint:gosec // see comment
+		if rerr == nil {
+			_ = writeTarFile(tw, "clyde.log", raw)
+		}
+	}
+	return path, nil
+}
+
+func buildCrashReportText() string {
+	info := version.Info()
+	var sb []byte
+	sb = fmt.Appendf(sb, "clyde crash report\n")
+	sb = fmt.Appendf(sb, "==================\n\n")
+	sb = fmt.Appendf(sb, "version : %s\n", info.Version)
+	sb = fmt.Appendf(sb, "commit  : %s\n", info.Commit)
+	sb = fmt.Appendf(sb, "built   : %s\n", info.Date)
+	sb = fmt.Appendf(sb, "go      : %s\n", info.GoVersion)
+	sb = fmt.Appendf(sb, "os/arch : %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	sb = fmt.Appendf(sb, "TERM    : %s\n", os.Getenv("TERM"))
+	sb = fmt.Appendf(sb, "shell   : %s\n", os.Getenv("SHELL"))
+	sb = fmt.Appendf(sb, "ts      : %s\n", time.Now().UTC().Format(time.RFC3339))
+	return string(sb)
+}
+
+func writeTarFile(tw *tar.Writer, name string, data []byte) error {
+	hdr := &tar.Header{
+		Name:    name,
+		Mode:    0o600,
+		Size:    int64(len(data)),
+		ModTime: time.Now(),
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		return fmt.Errorf("tar header %s: %w", name, err)
+	}
+	if _, err := io.Copy(tw, bytes.NewReader(data)); err != nil {
+		return fmt.Errorf("tar body %s: %w", name, err)
+	}
+	return nil
 }
 
 // writeHookURLFile persists the token-bearing hook callback URL to a
