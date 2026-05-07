@@ -17,13 +17,21 @@ Built spec-first using **SDD** (Spec-Driven Development), **DDD**, and **Hexagon
 
 ## Install
 
-### Pre-built binaries (recommended)
-
-Each release ships a `tar.gz` for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` plus a `checksums.txt`.
+### One-liner installer (recommended)
 
 ```sh
-# Replace VERSION + OS/ARCH for your platform; check the assets list at
-# https://github.com/Systemartis/clyde/releases for the exact filenames.
+curl -fsSL https://raw.githubusercontent.com/Systemartis/clyde/main/install.sh | sh
+```
+
+Detects your OS + arch, fetches the matching archive, verifies the cosign keyless signature (if `cosign` is on `$PATH`), checks the sha256 against `checksums.txt`, and drops the binary into `$HOME/.local/bin`. Override with `INSTALL_DIR=...` or pin a specific tag with `VERSION=v0.1.0` (see comments at the top of [`install.sh`](install.sh)).
+
+If you don't have `cosign` installed yet, you'll get a warning that the install proceeded with sha256 verification only. For full supply-chain verification install cosign first (`brew install cosign` / [other paths](https://github.com/sigstore/cosign#installation)) and re-run.
+
+### Pre-built binaries (manual)
+
+Each release ships a `tar.gz` for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` plus a `checksums.txt`, an SPDX SBOM per archive, and a cosign signature. See [SUPPLY_CHAIN.md](SUPPLY_CHAIN.md) for the full verify recipe.
+
+```sh
 VERSION=0.1.0
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
@@ -31,13 +39,6 @@ curl -fsSL "https://github.com/Systemartis/clyde/releases/download/v${VERSION}/c
   | tar -xz -C /tmp clyde
 install -m 0755 /tmp/clyde "$HOME/.local/bin/clyde"   # or anywhere on $PATH
 clyde --version
-```
-
-Verify the checksum before running an unfamiliar binary:
-
-```sh
-curl -fsSL "https://github.com/Systemartis/clyde/releases/download/v${VERSION}/checksums.txt" -o /tmp/clyde-checksums.txt
-( cd /tmp && sha256sum -c clyde-checksums.txt --ignore-missing )
 ```
 
 ### Build from source (`go install`)
