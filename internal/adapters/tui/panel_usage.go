@@ -227,33 +227,21 @@ func windowRowSubInfo(row UsageWindowRow) string {
 }
 
 // nextResetRow builds the synthetic "next reset" row (4th progress bar).
-// Picks the SOONEST upcoming reset between 5h and weekly. Returns ok=false
-// when no reset countdown is available.
+// Bound strictly to the 5h window — that's the cadence the user actually
+// tracks moment-to-moment (weekly is too long-horizon to live in a countdown
+// bar). Returns ok=false when no 5h countdown is available.
 //
 // The bar fill is ResetElapsedPct — % of TIME elapsed in the window — so it
 // always agrees with the countdown headline. Percent is NOT used: after the
 // plan-usage overlay it holds the quota %, which belongs to the row above.
 func nextResetRow(d MockData) (UsageWindowRow, bool) {
-	have5h := !d.Usage5h.Empty && d.Usage5h.ResetsIn != ""
-	haveWk := !d.UsageWeek.Empty && d.UsageWeek.ResetsIn != ""
-	if !have5h && !haveWk {
+	if d.Usage5h.Empty || d.Usage5h.ResetsIn == "" {
 		return UsageWindowRow{}, false
-	}
-	src := d.Usage5h
-	switch {
-	case !have5h:
-		src = d.UsageWeek
-	case haveWk && !d.Usage5h.ResetAt.IsZero() && !d.UsageWeek.ResetAt.IsZero() &&
-		d.UsageWeek.ResetAt.Before(d.Usage5h.ResetAt):
-		// The week boundary lands inside the current 5h window — the
-		// weekly reset really is next. Without timestamps (demo rows)
-		// keep the 5h-first heuristic.
-		src = d.UsageWeek
 	}
 	return UsageWindowRow{
 		Label:    "next reset",
-		Percent:  src.ResetElapsedPct,
-		ResetsIn: src.ResetsIn,
+		Percent:  d.Usage5h.ResetElapsedPct,
+		ResetsIn: d.Usage5h.ResetsIn,
 	}, true
 }
 

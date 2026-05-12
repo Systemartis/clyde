@@ -39,10 +39,11 @@ func TestNextResetRow_BarShowsTimeElapsedNotQuota(t *testing.T) {
 	}
 }
 
-// TestNextResetRow_PicksSoonestWindow verifies that when the weekly reset is
-// closer in wall-clock time than the 5h reset (e.g. the week boundary lands
-// inside the current 5h window), the reset row tracks the WEEKLY window.
-func TestNextResetRow_PicksSoonestWindow(t *testing.T) {
+// TestNextResetRow_Bound5hOnly verifies the reset row stays bound to the 5h
+// window even when the weekly reset is closer in wall-clock time. The 5h
+// cadence is what the user tracks moment-to-moment; the weekly countdown
+// already lives on its own row.
+func TestNextResetRow_Bound5hOnly(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
 	d := MockData{
@@ -63,11 +64,11 @@ func TestNextResetRow_PicksSoonestWindow(t *testing.T) {
 	if !ok {
 		t.Fatal("nextResetRow ok = false, want true")
 	}
-	if row.ResetsIn != "2h" {
-		t.Errorf("reset row ResetsIn = %q, want %q (weekly resets sooner)", row.ResetsIn, "2h")
+	if row.ResetsIn != "4h 30m" {
+		t.Errorf("reset row ResetsIn = %q, want %q (bound to 5h window)", row.ResetsIn, "4h 30m")
 	}
-	if row.Percent != 99 {
-		t.Errorf("reset row Percent = %d, want 99 (weekly window elapsed)", row.Percent)
+	if row.Percent != 10 {
+		t.Errorf("reset row Percent = %d, want 10 (5h window elapsed)", row.Percent)
 	}
 }
 
@@ -92,23 +93,17 @@ func TestNextResetRow_FallsBackTo5hWithoutTimestamps(t *testing.T) {
 	}
 }
 
-// TestNextResetRow_WeeklyOnly verifies the weekly fallback when the 5h row
-// has no countdown.
-func TestNextResetRow_WeeklyOnly(t *testing.T) {
+// TestNextResetRow_WeeklyOnly_NoBar verifies the reset row does NOT fall
+// back to the weekly window when the 5h row has no countdown — when 5h data
+// is missing the bar simply doesn't render.
+func TestNextResetRow_WeeklyOnly_NoBar(t *testing.T) {
 	t.Parallel()
 	d := MockData{
 		Usage5h:   UsageWindowRow{Label: "5h session", Empty: true},
 		UsageWeek: UsageWindowRow{Label: "weekly · all models", ResetsIn: "2d 7h", ResetElapsedPct: 67},
 	}
-	row, ok := nextResetRow(d)
-	if !ok {
-		t.Fatal("nextResetRow ok = false, want true")
-	}
-	if row.ResetsIn != "2d 7h" {
-		t.Errorf("reset row ResetsIn = %q, want %q", row.ResetsIn, "2d 7h")
-	}
-	if row.Percent != 67 {
-		t.Errorf("reset row Percent = %d, want 67", row.Percent)
+	if _, ok := nextResetRow(d); ok {
+		t.Error("nextResetRow ok = true, want false (no weekly fallback — bar is 5h-only)")
 	}
 }
 
