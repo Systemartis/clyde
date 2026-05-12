@@ -324,7 +324,9 @@ func LoadConfig() Config {
 		return cfg
 	}
 	path := home + "/.config/clyde/config.toml"
-	data, err := os.ReadFile(path)
+	// G304: path is built from the current user's home directory + a hard-
+	// coded suffix. The user's own config file is what we're trying to load.
+	data, err := os.ReadFile(path) //nolint:gosec // see comment
 	if err != nil {
 		return cfg
 	}

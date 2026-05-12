@@ -685,7 +685,8 @@ func readFileForViewerWithSize(path, cwd string) (string, int64, error) {
 		return fmt.Sprintf("  file too large (%s) — open in editor for full view", humanSize(info.Size())), info.Size(), nil
 	}
 
-	raw, err := os.ReadFile(absPath)
+	// G304: absPath is the file the user just selected in the explorer.
+	raw, err := os.ReadFile(absPath) //nolint:gosec // see comment
 	if err != nil {
 		return "", info.Size(), err
 	}
@@ -850,7 +851,9 @@ func readImageBytes(path, cwd string) ([]byte, int64, error) {
 		return nil, info.Size(), fmt.Errorf("image too large (%s) — preview cap is %s",
 			humanSize(info.Size()), humanSize(maxImageBytes))
 	}
-	raw, err := os.ReadFile(absPath)
+	// G304: absPath is the file the user just selected in the explorer.
+	// The viewer's purpose is to display files the user picks.
+	raw, err := os.ReadFile(absPath) //nolint:gosec // see comment
 	if err != nil {
 		return nil, info.Size(), err
 	}
@@ -957,7 +960,8 @@ func readFileForViewer(path, cwd string) (string, error) {
 		return fmt.Sprintf("  file too large (%d KB) — open in editor for full view", info.Size()/1024), nil
 	}
 
-	raw, err := os.ReadFile(absPath)
+	// G304: absPath is the file the user just selected in the explorer.
+	raw, err := os.ReadFile(absPath) //nolint:gosec // see comment
 	if err != nil {
 		return "", err
 	}

@@ -176,7 +176,11 @@ func (s *Source) Branch(cwd string) (branch string, dirty bool, err error) {
 // at 256 bytes (so a verbose GIT_TRACE setting can't flood logs with
 // per-call diagnostic spew).
 func runGitCommand(ctx context.Context, dir string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	// G204: args are caller-controlled but always come from this package's
+	// own functions (Status, Diff, etc.) with hard-coded subcommand
+	// strings + caller-provided commit refs. The binary name "git" is a
+	// constant. Treating this as user-supplied input would be wrong.
+	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // see comment
 	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

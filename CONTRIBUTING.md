@@ -31,6 +31,10 @@ Do **not** file public issues for security vulnerabilities. See [SECURITY.md](./
 3. **Keep commits clean.** We use [Conventional Commits](https://www.conventionalcommits.org/) — `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`, `perf:`. Squash if your PR has noise.
 4. **Make sure CI is green locally:**
    ```sh
+   make verify             # runs fmt-check, vet, lint, and -race tests
+   ```
+   …or run the underlying tools individually:
+   ```sh
    go test -race ./...
    golangci-lint run ./...
    gofmt -l .              # output should be empty

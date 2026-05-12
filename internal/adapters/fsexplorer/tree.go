@@ -289,7 +289,10 @@ type gitIgnore struct {
 // loadGitignore reads <root>/.gitignore and returns a gitIgnore instance.
 // Returns an empty gitIgnore on any read error.
 func loadGitignore(root string) gitIgnore {
-	f, err := os.Open(filepath.Join(root, ".gitignore"))
+	// G304: root is the cwd we were launched in; the suffix is the literal
+	// string ".gitignore". Reading the project's own gitignore is the
+	// entire purpose of this function.
+	f, err := os.Open(filepath.Join(root, ".gitignore")) //nolint:gosec // see comment
 	if err != nil {
 		return gitIgnore{}
 	}

@@ -10,16 +10,16 @@ import "strings"
 //	Replace every character that is not [A-Za-z0-9-] with '-'.
 //	Existing dashes in directory names are preserved.
 //
-// Examples (real evidence from ~/.claude/projects/):
+// Examples (matches the real layout under ~/.claude/projects/):
 //
-//	"/Users/vladpb/work/Personal"
-//	  → "-Users-vladpb-work-Personal"
+//	"/Users/alice/work/Personal"
+//	  → "-Users-alice-work-Personal"
 //
-//	"/Users/vladpb/work/Personal/diary2/.claude/worktrees/bold-villani"
-//	  → "-Users-vladpb-work-Personal-diary2--claude-worktrees-bold-villani"
+//	"/Users/alice/work/Personal/diary/.claude/worktrees/some-branch"
+//	  → "-Users-alice-work-Personal-diary--claude-worktrees-some-branch"
 //
-//	"/Users/vladpb/Library/Application Support/CodexBar/ClaudeProbe"
-//	  → "-Users-vladpb-Library-Application-Support-CodexBar-ClaudeProbe"
+//	"/Users/alice/Library/Application Support/CodexBar/ClaudeProbe"
+//	  → "-Users-alice-Library-Application-Support-CodexBar-ClaudeProbe"
 //
 // The encoding lives in exactly one function so that if Anthropic ever changes
 // the scheme, exactly one place changes and the fixture tests break loudly.

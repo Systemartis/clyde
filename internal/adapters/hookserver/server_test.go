@@ -378,3 +378,69 @@ func TestMultipleSequentialEvents(t *testing.T) {
 		}
 	}
 }
+
+// TestServer_DeniesWhenChannelFull asserts that when the events channel
+// has no consumer drain, the server denies (decision "block") rather
+// than auto-approving. Auto-approve would let any local process push
+// hook calls past a hung TUI and harvest approvals the user never granted.
+func TestServer_DeniesWhenChannelFull(t *testing.T) {
+	srv, cancel := newTestServer(t)
+	defer cancel()
+
+	// Never read from srv.Events() — fill the channel buffer with concurrent
+	// requests until the next request hits the `default` branch.
+	payload, err := json.Marshal(map[string]any{
+		"hook_type":  "PreToolUse",
+		"tool_name":  "Bash",
+		"tool_input": map[string]any{},
+		"cwd":        "/tmp/proj",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	// Send concurrent requests directly. Goroutines must NOT touch t.* — the
+	// server may shut down while a request is in flight, producing transport
+	// errors after the test returns; we report through the channel instead.
+	type result struct {
+		decision string
+		err      error
+	}
+	resultCh := make(chan result, 16)
+	for i := 0; i < 16; i++ {
+		go func() {
+			resp, perr := http.Post(srv.URL(), "application/json", bytes.NewReader(payload)) //nolint:noctx
+			if perr != nil {
+				resultCh <- result{err: perr}
+				return
+			}
+			defer resp.Body.Close()
+			var decoded map[string]any
+			if jerr := json.NewDecoder(resp.Body).Decode(&decoded); jerr != nil {
+				resultCh <- result{err: jerr}
+				return
+			}
+			d, _ := decoded["decision"].(string)
+			resultCh <- result{decision: d}
+		}()
+	}
+
+	// Collect decisions for 1.5s — at least one must be "block".
+	deadline := time.After(1500 * time.Millisecond)
+	gotBlock := false
+collect:
+	for i := 0; i < 16; i++ {
+		select {
+		case r := <-resultCh:
+			if r.err == nil && r.decision == "block" {
+				gotBlock = true
+				break collect
+			}
+		case <-deadline:
+			break collect
+		}
+	}
+	if !gotBlock {
+		t.Fatal("expected at least one 'block' decision when events channel is full; got none")
+	}
+}

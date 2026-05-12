@@ -67,9 +67,11 @@ func (f FrameState) SpinnerGlyph() string {
 func AdvanceTick(prev FrameState) FrameState {
 	t := prev.Tick + 1
 	return FrameState{
-		Tick:          t,
-		Mascot:        prev.Mascot.Advance(),
-		SpinnerFrame:  int(t/5) % len(spinnerGlyphs), // ~250ms per frame at 50ms tick
+		Tick:   t,
+		Mascot: prev.Mascot.Advance(),
+		// G115: t is uint64 but bounded by the modulo (len(spinnerGlyphs) is
+		// a small int), so the int conversion can never overflow.
+		SpinnerFrame:  int(t/5) % len(spinnerGlyphs), //nolint:gosec // see comment
 		LiveDotDim:    (t/16)%2 == 1,                 // dim half of every 0.8s cycle
 		CursorVisible: (t/8)%2 == 0,                  // visible for first 0.4s of 0.8s cycle
 		ChevronDim:    (t/14)%2 == 1,                 // dim half of every 0.7s cycle

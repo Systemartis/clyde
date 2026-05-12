@@ -5,39 +5,68 @@ on:
     branches: [main]
   pull_request:
 
+# Cancel superseded runs on the same ref to save minutes and avoid double-
+# reporting flake on quick force-push iterations. main pushes are still
+# never cancelled (different ref).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Default-deny at workflow level. Each job re-grants only what it needs.
 permissions:
   contents: read
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: '1.26'
           cache: true
 
       - name: go test
-        run: go test -race -cover ./...
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: coverage threshold gate (≥65%)
+        # Read total coverage from the profile and fail the build if it drops
+        # below the floor. Today (2026-05-07) we're at ~68%; the gate protects
+        # against silent regressions when new untested code lands. Bump the
+        # floor when the project clears the next round number for a sustained
+        # period.
+        run: |
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          echo "total coverage: ${total}%"
+          floor=65.0
+          # awk handles float comparison in a portable way (bash can't).
+          if awk -v t="$total" -v f="$floor" 'BEGIN { exit !(t < f) }'; then
+            echo "::error::coverage ${total}% is below floor ${floor}%"
+            exit 1
+          fi
 
   lint:
     name: lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: '1.26'
           cache: true
 
-      - uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9
         with:
           version: v2.11.4
           args: --timeout=5m
@@ -45,10 +74,14 @@ jobs:
   fmt:
     name: gofmt
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: '1.26'
 
@@ -64,16 +97,129 @@ jobs:
   vuln:
     name: govulncheck
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: '1.26'
           cache: true
 
+      # Pinned to a specific govulncheck release — `@latest` is reproducible
+      # neither across reruns nor across forks. Bump deliberately when a new
+      # advisory needs the newer detector.
       - name: install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.3.0
 
       - name: govulncheck
         run: govulncheck ./...
+
+  smoke:
+    name: smoke (--demo)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: build
+        run: go build -o /tmp/clyde ./cmd/clyde
+
+      - name: --version (no-TTY smoke)
+        run: /tmp/clyde --version
+
+      - name: run --demo for 3s
+        run: |
+          # Demo mode does no live reads. We expect the binary to start a
+          # bubbletea program, which requires a TTY — GitHub Actions runners
+          # don't have one, so wrap the binary in `script` to allocate a pty.
+          # SIGTERM (124 from timeout, or 143 from script forwarding) is the
+          # success signal here.
+          set +e
+          timeout --signal=TERM 3 script -q -e -c "/tmp/clyde --demo --layout=stack" /dev/null
+          code=$?
+          if [ $code -ne 124 ] && [ $code -ne 143 ] && [ $code -ne 0 ]; then
+            echo "::error::clyde --demo exited with $code"
+            exit 1
+          fi
+
+  goreleaser-check:
+    name: goreleaser (snapshot)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          # Skip sbom + sign in snapshot — they require syft + cosign on
+          # PATH and an OIDC token that's only present in the real release
+          # workflow. The build/archive/checksum pipeline still runs, which
+          # is what we actually want to gate on.
+          args: release --snapshot --clean --skip=publish,sbom,sign
+
+      - name: --version on snapshot binary
+        run: |
+          # Cross-platform-ish: pick the matching linux/amd64 build.
+          bin=$(find dist -type f -name clyde -path '*linux_amd64*' | head -1)
+          if [ -z "$bin" ]; then
+            echo "::error::no linux/amd64 snapshot binary found"
+            ls -R dist
+            exit 1
+          fi
+          "$bin" --version
+
+  fuzz:
+    name: fuzz (smoke, ~90s)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: jsonl line decoder
+        run: go test -fuzz=FuzzDecodeLineWithMsgID -fuzztime=15s ./internal/adapters/jsonl/
+
+      - name: processscan ps output
+        run: go test -fuzz=FuzzParseClaudeSessionIDs -fuzztime=15s ./internal/adapters/processscan/
+
+      - name: git status parser
+        run: go test -fuzz=FuzzParseStatus -fuzztime=15s ./internal/adapters/git/
+
+      - name: git diff parser
+        run: go test -fuzz=FuzzParseDiff -fuzztime=15s ./internal/adapters/git/
+
+      - name: anthropicapi credentials
+        run: go test -fuzz=FuzzParseCredentialsJSON -fuzztime=15s ./internal/adapters/anthropicapi/
+
+      - name: claudesettings reader
+        run: go test -fuzz=FuzzReadSettings -fuzztime=15s ./internal/adapters/claudesettings/

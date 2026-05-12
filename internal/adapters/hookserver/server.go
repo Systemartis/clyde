@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -159,12 +160,18 @@ func (s *Server) Events() <-chan HookEvent {
 // point it performs a graceful shutdown and closes the events channel.
 // Start is safe to call in a goroutine. It must only be called once.
 func (s *Server) Start(ctx context.Context) error {
-	var serveErr error
+	// Buffered so the goroutine can deposit its result and exit even if
+	// nobody is yet receiving. The send-into-channel happens-before the
+	// receive below, which gives Start the synchronization edge a plain
+	// stack-allocated error variable lacks.
+	serveErrCh := make(chan error, 1)
 
 	go func() {
 		if err := s.srv.Serve(s.listener); err != nil && err != http.ErrServerClosed {
-			serveErr = err
+			serveErrCh <- err
+			return
 		}
+		serveErrCh <- nil
 	}()
 
 	<-ctx.Done()
@@ -178,7 +185,7 @@ func (s *Server) Start(ctx context.Context) error {
 		close(s.events)
 	})
 
-	return serveErr
+	return <-serveErrCh
 }
 
 // hookRequest is the JSON body expected from the claude CLI hook call.
@@ -230,22 +237,36 @@ func (s *Server) handleHook(w http.ResponseWriter, r *http.Request) {
 		ResponseCh: make(chan HookResponse, 1),
 	}
 
-	// Deliver to consumer. If the events channel is full or closed, deny
-	// immediately rather than blocking the HTTP request indefinitely.
+	// Deliver to consumer. If the events channel is full or has no consumer,
+	// fail closed: deny the call rather than approving silently. Auto-allow
+	// would let any local process push hook calls past a hung TUI and harvest
+	// approvals the user never granted; deny forces a re-prompt instead.
 	select {
 	case s.events <- evt:
 	default:
-		// Channel full or no consumer — auto-allow so claude is not blocked.
-		writeAllow(w)
+		slog.Warn("hookserver: events channel full — denying",
+			slog.String("tool", req.Tool),
+			slog.String("hook_type", req.HookType),
+		)
+		writeDeny(w, "clyde busy — re-run the tool to retry")
 		return
 	}
 
 	// Wait for the consumer's decision.
 	resp, ok := <-evt.ResponseCh
 	if !ok || resp.Allow {
+		slog.Debug("hookserver: allow",
+			slog.String("tool", req.Tool),
+			slog.String("hook_type", req.HookType),
+		)
 		writeAllow(w)
 		return
 	}
+	slog.Info("hookserver: deny",
+		slog.String("tool", req.Tool),
+		slog.String("hook_type", req.HookType),
+		slog.String("reason", resp.Reason),
+	)
 	writeDeny(w, resp.Reason)
 }
 

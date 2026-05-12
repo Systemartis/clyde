@@ -1,5 +1,10 @@
 # Clyde
 
+[![CI](https://github.com/Systemartis/clyde/actions/workflows/ci.yml/badge.svg)](https://github.com/Systemartis/clyde/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Systemartis/clyde)](https://goreportcard.com/report/github.com/Systemartis/clyde)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Systemartis/clyde.svg)](https://pkg.go.dev/github.com/Systemartis/clyde)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 > Claude's best friend.
 
 A terminal companion for Claude Code. Tile it next to your `claude` pane in tmux/cmux/Ghostty and see live sessions, tool activity, token usage, todos, subagents, and project state — all without leaving the terminal.
@@ -12,15 +17,39 @@ Built spec-first using **SDD** (Spec-Driven Development), **DDD**, and **Hexagon
 
 ## Install
 
+### One-liner installer (recommended)
+
 ```sh
-git clone <this-repo> clyde
-cd clyde
-go install ./cmd/clyde
+curl -fsSL https://raw.githubusercontent.com/Systemartis/clyde/main/install.sh | sh
 ```
 
-`go install` puts the binary at `$(go env GOPATH)/bin/clyde` (typically `~/go/bin/clyde`).
+Detects your OS + arch, fetches the matching archive, verifies the cosign keyless signature (if `cosign` is on `$PATH`), checks the sha256 against `checksums.txt`, and drops the binary into `$HOME/.local/bin`. Override with `INSTALL_DIR=...` or pin a specific tag with `VERSION=v0.1.0` (see comments at the top of [`install.sh`](install.sh)).
 
-If `~/go/bin` is in your `$PATH`, you're done. Otherwise either:
+If you don't have `cosign` installed yet, you'll get a warning that the install proceeded with sha256 verification only. For full supply-chain verification install cosign first (`brew install cosign` / [other paths](https://github.com/sigstore/cosign#installation)) and re-run.
+
+### Pre-built binaries (manual)
+
+Each release ships a `tar.gz` for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` plus a `checksums.txt`, an SPDX SBOM per archive, and a cosign signature. See [SUPPLY_CHAIN.md](SUPPLY_CHAIN.md) for the full verify recipe.
+
+```sh
+VERSION=0.1.0
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -fsSL "https://github.com/Systemartis/clyde/releases/download/v${VERSION}/clyde_${VERSION}_${OS}_${ARCH}.tar.gz" \
+  | tar -xz -C /tmp clyde
+install -m 0755 /tmp/clyde "$HOME/.local/bin/clyde"   # or anywhere on $PATH
+clyde --version
+```
+
+### Build from source (`go install`)
+
+Requires Go 1.26+:
+
+```sh
+go install github.com/Systemartis/clyde/cmd/clyde@latest
+```
+
+The binary lands at `$(go env GOPATH)/bin/clyde` (typically `~/go/bin/clyde`). If `~/go/bin` is on your `$PATH`, you're done. Otherwise:
 
 ```sh
 # Option 1 — add ~/go/bin to PATH permanently (zsh)
@@ -30,7 +59,7 @@ echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc
 ln -sf "$(go env GOPATH)/bin/clyde" ~/.local/bin/clyde
 ```
 
-Verify with `which clyde`.
+Verify with `which clyde && clyde --version`.
 
 ## Usage
 
@@ -79,3 +108,25 @@ gofmt -l .                    # formatting (no diff = clean)
 golangci-lint run ./...       # lint + hexagonal layer enforcement
 go build ./cmd/clyde          # local build
 ```
+
+## Security
+
+Found a vulnerability? Please **don't** open a public issue. See [SECURITY.md](SECURITY.md) for the disclosure process and trust model. Each tagged release ships SPDX SBOMs and a keyless cosign signature over `checksums.txt` — verify before running.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the local-dev setup, the strict-TDD requirement, and the conventional-commits + branch-naming rules.
+
+## Governance
+
+[GOVERNANCE.md](GOVERNANCE.md) describes how decisions get made and who holds the keys; [MAINTAINERS.md](MAINTAINERS.md) lists the current crew.
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
+
+## Trademarks
+
+**Clyde** and the visual identity are trademarks of [Systemartis](https://systemartis.com). The Apache 2.0 license covers the source code; it does not grant rights to the name or branding. Forks are welcome — please pick a different name.
+
+**Claude** and **Claude Code** are trademarks of [Anthropic, PBC](https://www.anthropic.com). This project is not affiliated with, endorsed by, or sponsored by Anthropic. Clyde is a third-party companion that reads files Claude Code writes locally; it is not a client of any Anthropic API on its own (the optional plan-usage check uses the same credentials Claude Code already wrote to your Keychain).

@@ -269,6 +269,30 @@ func TestViewDoesNotShowMockNotification(t *testing.T) {
 	}
 }
 
+// TestViewDoesNotPanicAtZeroSize verifies View() survives the pre-WindowSize
+// initial frame. Bubble Tea v2 calls View() before the first WindowSizeMsg
+// arrives, so width and height are 0 — which used to crash inside
+// wrapPanelCollapsed via strings.Repeat with a negative count. CI runners
+// (no real /dev/tty) hit this path reliably; local terminals don't.
+func TestViewDoesNotPanicAtZeroSize(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("View() panicked at zero size: %v", r)
+		}
+	}()
+	m := NewModel()
+	// Deliberately do NOT send a WindowSizeMsg — emulate the initial frame.
+	_ = m.View()
+
+	// Also try a few small/degenerate sizes that can produce negative
+	// derived widths (innerW = width - 2 etc.).
+	for _, sz := range []struct{ w, h int }{{0, 0}, {1, 1}, {2, 2}, {3, 3}} {
+		next, _ := m.Update(tea.WindowSizeMsg{Width: sz.w, Height: sz.h})
+		m = next.(Model)
+		_ = m.View()
+	}
+}
+
 // TestEscDismissesNotification verifies that pressing Esc sets notifAck.
 func TestEscDismissesNotification(t *testing.T) {
 	m := NewModel()

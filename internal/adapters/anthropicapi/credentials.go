@@ -13,11 +13,11 @@
 package anthropicapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,6 +25,11 @@ import (
 	"strings"
 	"time"
 )
+
+// keychainStderrCap bounds how much of `security`'s stderr we keep when
+// surfacing a Keychain error. The binary's diagnostics are short by
+// design; 1 KiB is plenty without risking accidental log bloat.
+const keychainStderrCap = 1 << 10
 
 // contextWithTimeout is a thin wrapper that returns a Background-rooted
 // timeout context — used by Keychain reads where there's no caller-provided
@@ -111,15 +116,50 @@ func loadFromKeychain() (Credentials, error) {
 		"-s", "Claude Code-credentials",
 		"-w",
 	)
-	// Suppress stderr — the parent process's stderr feeds into the
-	// bubbletea-rendered terminal, and any diagnostic from `security`
-	// (e.g. user-not-authenticated prompts) would corrupt the TUI.
-	cmd.Stderr = io.Discard
+	// Capture stderr into a capped buffer so we can surface a useful
+	// reason on failure. We intentionally do NOT route it to the parent's
+	// stderr — that feed is the bubbletea-rendered terminal and any direct
+	// write would corrupt the TUI.
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return Credentials{}, ErrCredentialsNotFound
+		// "item not found" is the routine "no creds in Keychain" path —
+		// callers fall through to the file source. Anything else is a
+		// real Keychain error worth surfacing.
+		stderrText := truncateBytes(stderr.Bytes(), keychainStderrCap)
+		if isKeychainItemNotFound(stderrText) {
+			return Credentials{}, ErrCredentialsNotFound
+		}
+		return Credentials{}, fmt.Errorf("%w: %s", ErrCredentialsNotFound, snippet([]byte(stderrText)))
 	}
 	return parseCredentialsJSON(out)
+}
+
+// truncateBytes returns the first n bytes of b as a string, with an
+// ellipsis appended when truncation occurred. Bounds the size of stderr
+// snippets we propagate into errors / logs.
+func truncateBytes(b []byte, n int) string {
+	if len(b) <= n {
+		return string(b)
+	}
+	return string(b[:n]) + "…"
+}
+
+// isKeychainItemNotFound reports whether the security(1) stderr text
+// matches the routine "no credential present" outcome. The exact phrasing
+// has been stable across macOS releases since at least 10.15.
+func isKeychainItemNotFound(stderr string) bool {
+	if stderr == "" {
+		// Some shells eat the diagnostic; treat empty stderr as "not found"
+		// to preserve the file fallback path on machines where Keychain
+		// access is denied silently.
+		return true
+	}
+	low := strings.ToLower(stderr)
+	return strings.Contains(low, "could not be found") ||
+		strings.Contains(low, "errsecitemnotfound") ||
+		strings.Contains(low, "specified item could not be found")
 }
 
 // loadFromFile reads ~/.claude/.credentials.json, returning
