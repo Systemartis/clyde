@@ -1035,26 +1035,31 @@ func sessionContributesToAggregate(running bool, lastActivity, snapshotAt time.T
 //
 // Rules:
 //  1. JSONL appended within liveActivityWindow → always live.
-//  2. ps(1) reports a `claude --session-id <X>` process for this ID,
-//     AND the cwd has no NEWER session — live.
+//  2. ps(1) reports a `claude --session-id <X>` process for this ID:
+//     a. If this session IS the freshest in its cwd → live.
+//     b. Else, only live when the freshest session in cwd ALSO has its
+//     own argv-detected process (freshestIsArgvDetected). That
+//     signals genuinely parallel `claude` invocations — each PID is
+//     bound to its own session ID and every sibling is real.
 //
-// Why the newer-session guard: claude code's `/new` command starts a
-// fresh session inside the SAME OS process, so the original argv still
-// references the previous session ID. Without this guard the old
-// session reads as live forever (or until the process exits) even
-// though all writes have moved to the /new'd successor. The guard
-// drops the argv-based boost the moment a fresher sibling shows up.
-func isSessionLive(id session.ID, runningIDs map[session.ID]bool, lastActivity, freshestInCwd, snapshotAt time.Time) bool {
+// Why the freshestIsArgvDetected guard: claude code's `/new` command
+// starts a fresh session inside the SAME OS process, so the original
+// argv still references the previous session ID. The freshest JSONL
+// in the cwd then has no matching process entry. In that case the
+// older argv-detected session is a ghost and we demote it. With two
+// separate `claude` invocations, both session IDs appear in argv —
+// the older sibling is a real process the user can still type into.
+func isSessionLive(id session.ID, runningIDs map[session.ID]bool, lastActivity, freshestInCwd time.Time, freshestIsArgvDetected bool, snapshotAt time.Time) bool {
 	if snapshotAt.Sub(lastActivity) <= liveActivityWindow {
 		return true
 	}
 	if !runningIDs[id] {
 		return false
 	}
-	// argv-detected. Only honor the boost when this session is the
-	// freshest in its cwd. A strictly-newer sibling means /new (or a
-	// similar cut-over) has happened and the argv ref is stale.
-	return !lastActivity.Before(freshestInCwd)
+	if !lastActivity.Before(freshestInCwd) {
+		return true
+	}
+	return freshestIsArgvDetected
 }
 
 // applySessionStats walks every session in the current project (cwd) and
@@ -1089,15 +1094,20 @@ func (l *LiveSession) applySessionStats(ctx context.Context, base View, summarie
 	}
 
 	// Pre-compute the freshest activity timestamp across all visible
-	// sessions in this cwd. Used by isSessionLive() to demote the
-	// argv-based liveness boost when /new (or similar cut-over) has
-	// pushed work onto a newer session in the same process.
+	// sessions in this cwd, plus whether the freshest session is itself
+	// argv-detected. isSessionLive uses both to distinguish a /new
+	// ghost (older sibling with stale mtime, freshest has no process)
+	// from parallel `claude` invocations (older sibling with its own
+	// running process, freshest also has a process).
 	freshestInCwd := time.Time{}
+	var freshestID session.ID
 	for _, sum := range summaries {
 		if sum.LastActivity.After(freshestInCwd) {
 			freshestInCwd = sum.LastActivity
+			freshestID = sum.ID
 		}
 	}
+	freshestIsArgvDetected := runningIDs[freshestID]
 
 	stats := make([]SessionStat, 0, len(summaries))
 	cwdCache := CacheStats{}
@@ -1150,9 +1160,10 @@ func (l *LiveSession) applySessionStats(ctx context.Context, base View, summarie
 			effectiveLast = sum.LastActivity
 		}
 		// IsLive: see isSessionLive. JSONL-mtime activity wins outright;
-		// argv-based detection is honored only when no fresher sibling
-		// exists in the same cwd (guards against /new ghosts).
-		isLive := isSessionLive(sum.ID, runningIDs, effectiveLast, freshestInCwd, base.LastUpdate)
+		// argv-based detection is honored when the session is the freshest
+		// in its cwd, or when the freshest sibling also has its own
+		// running process (parallel `claude` invocations).
+		isLive := isSessionLive(sum.ID, runningIDs, effectiveLast, freshestInCwd, freshestIsArgvDetected, base.LastUpdate)
 
 		stats = append(stats, SessionStat{
 			ID:            sum.ID,
