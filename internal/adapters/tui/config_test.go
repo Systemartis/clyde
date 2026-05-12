@@ -138,3 +138,130 @@ func TestConfig_TOMLRoundTrip(t *testing.T) {
 		t.Errorf("round-trip lost the diff override")
 	}
 }
+
+// TestProjectOverride_PanelLayoutsRoundTrip verifies the panel_layouts
+// per-project section serializes and deserializes through TOML cleanly.
+func TestProjectOverride_PanelLayoutsRoundTrip(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	cfg.Projects = map[string]ProjectOverride{
+		"/proj/a": {
+			PanelLayouts: map[string]PanelLayout{
+				"usage": {Height: 22, DefaultCollapsed: false},
+				"diff":  {DefaultCollapsed: true},
+			},
+		},
+	}
+	var buf strings.Builder
+	if err := toml.NewEncoder(&buf).Encode(cfg); err != nil {
+		t.Fatalf("encode failed: %v", err)
+	}
+	var got Config
+	if _, err := toml.Decode(buf.String(), &got); err != nil {
+		t.Fatalf("decode failed: %v", err)
+	}
+	got2 := got.Projects["/proj/a"].PanelLayouts["usage"]
+	if got2.Height != 22 {
+		t.Errorf("usage height round-trip = %d, want 22", got2.Height)
+	}
+	if !got.Projects["/proj/a"].PanelLayouts["diff"].DefaultCollapsed {
+		t.Errorf("diff DefaultCollapsed round-trip lost")
+	}
+}
+
+// TestEffectiveFor_PanelLayoutOverride verifies that a per-project
+// PanelLayouts entry overlays Height and DefaultCollapsed on top of the
+// global panels section.
+func TestEffectiveFor_PanelLayoutOverride(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	cfg.Panels.Usage.Height = 14 // global default
+	cfg.Projects = map[string]ProjectOverride{
+		"/proj/a": {
+			PanelLayouts: map[string]PanelLayout{
+				"usage": {Height: 22, DefaultCollapsed: false},
+				"now":   {DefaultCollapsed: true},
+			},
+		},
+	}
+	got := cfg.EffectiveFor("/proj/a")
+	if got.Panels.Usage.Height != 22 {
+		t.Errorf("usage height = %d, want 22 (project override)", got.Panels.Usage.Height)
+	}
+	if !got.Panels.Now.DefaultCollapsed {
+		t.Errorf("now DefaultCollapsed should be true under project override")
+	}
+}
+
+// TestProjectLayout_CollapsedStateRoundTrip verifies that a user's
+// collapsed/expanded choice in one project persists across launches:
+// save → EffectiveFor for that cwd → resulting Panels mirror the choice.
+func TestProjectLayout_CollapsedStateRoundTrip(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	cfg.Panels.Diff.DefaultCollapsed = false // global says expanded
+	collapse := make([]PanelCollapseState, panelCount)
+	collapse[PanelDiff] = NewPanelCollapseState(true, 10) // user collapsed in /proj/a
+	heights := map[PanelID]int{}
+	setProjectPanelLayouts(&cfg, "/proj/a", collapse, heights)
+
+	effective := cfg.EffectiveFor("/proj/a")
+	if !effective.Panels.Diff.DefaultCollapsed {
+		t.Errorf("/proj/a: Diff.DefaultCollapsed = false, want true (persisted)")
+	}
+
+	// A second project without an override still sees the global default.
+	effectiveB := cfg.EffectiveFor("/proj/b")
+	if effectiveB.Panels.Diff.DefaultCollapsed {
+		t.Errorf("/proj/b: Diff.DefaultCollapsed = true, want false (global default)")
+	}
+}
+
+// TestEffectiveFor_PanelLayoutLeavesOtherProjectsAlone verifies that
+// applying the override for cwd A does not mutate the global config seen
+// by cwd B.
+func TestEffectiveFor_PanelLayoutLeavesOtherProjectsAlone(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	cfg.Panels.Usage.Height = 14
+	cfg.Projects = map[string]ProjectOverride{
+		"/proj/a": {
+			PanelLayouts: map[string]PanelLayout{
+				"usage": {Height: 22},
+			},
+		},
+	}
+	gotB := cfg.EffectiveFor("/proj/b")
+	if gotB.Panels.Usage.Height != 14 {
+		t.Errorf("project B usage height = %d, want 14 (global default)", gotB.Panels.Usage.Height)
+	}
+}
+
+// TestSetProjectPanelLayouts_WritesFullSnapshot verifies that any
+// interaction in a project persists the complete collapsed/expanded
+// state for all panels, not just the one the user touched. This lets the
+// user assume "the whole layout would remain the same" across launches.
+func TestSetProjectPanelLayouts_WritesFullSnapshot(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	collapse := make([]PanelCollapseState, panelCount)
+	// PanelDiff is collapsed by the user; the rest are expanded.
+	collapse[PanelDiff] = NewPanelCollapseState(true, 10)
+	heights := map[PanelID]int{
+		PanelUsage: 22, // user manually resized usage only
+	}
+	setProjectPanelLayouts(&cfg, "/proj/a", collapse, heights)
+	override := cfg.Projects[NormalizeCwd("/proj/a")]
+	if got := len(override.PanelLayouts); got != int(panelCount) {
+		t.Errorf("PanelLayouts entries = %d, want %d (all panels)", got, panelCount)
+	}
+	if override.PanelLayouts["usage"].Height != 22 {
+		t.Errorf("usage layout height = %d, want 22", override.PanelLayouts["usage"].Height)
+	}
+	if !override.PanelLayouts["diff"].DefaultCollapsed {
+		t.Errorf("diff DefaultCollapsed should be true")
+	}
+	if override.PanelLayouts["now"].DefaultCollapsed {
+		t.Errorf("now DefaultCollapsed should be false (expanded)")
+	}
+}

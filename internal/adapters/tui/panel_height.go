@@ -91,6 +91,12 @@ func (m Model) panelSettledHeight(pid PanelID) int {
 // state to baseCfg and the on-disk config file when RememberLayout is on.
 // No-op otherwise — runtime changes stay in-session.
 //
+// When the model has a non-empty cwd (live mode under a real project),
+// the layout is written to baseCfg.Projects[cwd].PanelLayouts so each
+// project keeps its own layout. With an empty cwd (demo mode or tests),
+// the layout is written to the global baseCfg.Panels section as a
+// fallback so the existing default still has a home.
+//
 // Called from every code path that mutates collapse[pid] or
 // panelHeights[pid] interactively (resize, space-toggle, header click,
 // backspace-collapse, focus-expand). Pure save-on-change — no debounce;
@@ -99,10 +105,57 @@ func (m *Model) persistLayoutIfEnabled() {
 	if !m.baseCfg.RememberLayout {
 		return
 	}
-	for pid := PanelID(0); pid < panelCount; pid++ {
-		setPanelLayoutInCfg(&m.baseCfg, pid, m.collapse[pid].IsCollapsed(), m.panelHeights[pid])
+	cwd := m.persistCwd()
+	if cwd == "" {
+		for pid := PanelID(0); pid < panelCount; pid++ {
+			setPanelLayoutInCfg(&m.baseCfg, pid, m.collapse[pid].IsCollapsed(), m.panelHeights[pid])
+		}
+		writeConfigFile(m.baseCfg)
+		return
 	}
+	setProjectPanelLayouts(&m.baseCfg, cwd, m.collapse[:], m.panelHeights)
 	writeConfigFile(m.baseCfg)
+}
+
+// persistCwd returns the directory key used when writing per-project
+// layout overrides. Falls back to the empty string in demo/test mode so
+// the caller can use the global panels section instead.
+func (m *Model) persistCwd() string {
+	if cwd := m.liveProject.CWD(); cwd != "" {
+		return cwd
+	}
+	return ""
+}
+
+// setProjectPanelLayouts writes the current collapse + height state for
+// every panel into baseCfg.Projects[NormalizeCwd(cwd)].PanelLayouts,
+// creating the project section and its inner map when missing.
+//
+// The snapshot is intentionally complete: once the user has interacted
+// with the layout in a project, every panel's collapsed/expanded state is
+// captured so the next session restores the same layout the user last
+// saw. The global PanelConfig.DefaultCollapsed is treated as the seed
+// for first-time-visited projects only.
+func setProjectPanelLayouts(cfg *Config, cwd string, collapse []PanelCollapseState, heights map[PanelID]int) {
+	if cfg.Projects == nil {
+		cfg.Projects = map[string]ProjectOverride{}
+	}
+	key := NormalizeCwd(cwd)
+	override := cfg.Projects[key]
+	if override.PanelLayouts == nil {
+		override.PanelLayouts = map[string]PanelLayout{}
+	}
+	for pid := PanelID(0); pid < panelCount; pid++ {
+		name := panelTOMLName(pid)
+		if name == "" {
+			continue
+		}
+		override.PanelLayouts[name] = PanelLayout{
+			Height:           heights[pid],
+			DefaultCollapsed: collapse[pid].IsCollapsed(),
+		}
+	}
+	cfg.Projects[key] = override
 }
 
 // setPanelLayoutInCfg writes collapsed + height into the per-panel slot
@@ -142,4 +195,29 @@ func panelConfigPtr(cfg *Config, pid PanelID) *PanelConfig {
 		return &cfg.Panels.Cache
 	}
 	return nil
+}
+
+// panelTOMLName returns the TOML key used for a PanelID in the panels
+// table and per-project overrides. Returns "" for unknown panel IDs.
+// "calls" is the v13+ name; the "tasks" alias is read-only.
+func panelTOMLName(pid PanelID) string {
+	switch pid {
+	case PanelNow:
+		return "now"
+	case PanelCalls:
+		return "calls"
+	case PanelDiff:
+		return "diff"
+	case PanelUsage:
+		return "usage"
+	case PanelExplorer:
+		return "explorer"
+	case PanelServers:
+		return "servers"
+	case PanelBash:
+		return "bash"
+	case PanelCache:
+		return "cache"
+	}
+	return ""
 }

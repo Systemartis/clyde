@@ -186,10 +186,22 @@ type PanelsConfig struct {
 // ProjectOverride is a per-project settings layer applied on top of the
 // global config when the user is launched in that working directory.
 //
-// V22 only supports panel-visibility overrides; future revisions may extend
-// to layout / theme overrides, gated by a similar map[string]string pattern.
+// Panels carries per-panel visibility overrides (enabled flag).
+// PanelLayouts carries per-panel layout overrides (manual Height and
+// DefaultCollapsed) so RememberLayout-driven persistence is scoped to
+// the project the user actually resized panels in.
 type ProjectOverride struct {
-	Panels map[string]bool `toml:"panels,omitempty"`
+	Panels       map[string]bool        `toml:"panels,omitempty"`
+	PanelLayouts map[string]PanelLayout `toml:"panel_layouts,omitempty"`
+}
+
+// PanelLayout is the per-project subset of PanelConfig that participates
+// in RememberLayout persistence. Height==0 means "no manual override";
+// DefaultCollapsed defaults to false and is omitted from the TOML when
+// it matches that zero value.
+type PanelLayout struct {
+	Height           int  `toml:"height,omitempty"`
+	DefaultCollapsed bool `toml:"default_collapsed,omitempty"`
 }
 
 // Config is the root config struct for the clyde TUI.
@@ -387,6 +399,7 @@ func (cfg Config) EffectiveFor(cwd string) Config {
 	}
 	out := cfg
 	out.Panels = applyPanelOverride(out.Panels, override.Panels)
+	out.Panels = applyPanelLayoutOverride(out.Panels, override.PanelLayouts)
 	return out
 }
 
@@ -395,26 +408,54 @@ func (cfg Config) EffectiveFor(cwd string) Config {
 // their global value).
 func applyPanelOverride(base PanelsConfig, over map[string]bool) PanelsConfig {
 	for name, enabled := range over {
-		switch name {
-		case "now":
-			base.Now.Enabled = enabled
-		case "calls", "tasks":
-			base.Calls.Enabled = enabled
-		case "diff":
-			base.Diff.Enabled = enabled
-		case "usage":
-			base.Usage.Enabled = enabled
-		case "explorer":
-			base.Explorer.Enabled = enabled
-		case "servers":
-			base.Servers.Enabled = enabled
-		case "bash":
-			base.Bash.Enabled = enabled
-		case "cache":
-			base.Cache.Enabled = enabled
+		if pc := panelSlotByName(&base, name); pc != nil {
+			pc.Enabled = enabled
 		}
 	}
 	return base
+}
+
+// applyPanelLayoutOverride returns a copy of base with Height and
+// DefaultCollapsed replaced for each panel listed in over. Missing keys
+// keep their global value. Height==0 in an override is treated as "clear
+// the manual override" and falls back to the base height.
+func applyPanelLayoutOverride(base PanelsConfig, over map[string]PanelLayout) PanelsConfig {
+	for name, layout := range over {
+		pc := panelSlotByName(&base, name)
+		if pc == nil {
+			continue
+		}
+		pc.DefaultCollapsed = layout.DefaultCollapsed
+		if layout.Height > 0 {
+			pc.Height = layout.Height
+		}
+	}
+	return base
+}
+
+// panelSlotByName returns a pointer to the PanelConfig slot in cfg
+// matching the TOML panel name, or nil if the name is unknown.
+// "tasks" is an alias for "calls" so legacy configs keep working.
+func panelSlotByName(cfg *PanelsConfig, name string) *PanelConfig {
+	switch name {
+	case "now":
+		return &cfg.Now
+	case "calls", "tasks":
+		return &cfg.Calls
+	case "diff":
+		return &cfg.Diff
+	case "usage":
+		return &cfg.Usage
+	case "explorer":
+		return &cfg.Explorer
+	case "servers":
+		return &cfg.Servers
+	case "bash":
+		return &cfg.Bash
+	case "cache":
+		return &cfg.Cache
+	}
+	return nil
 }
 
 // ResolveMode returns the effective LayoutMode for a given terminal width,

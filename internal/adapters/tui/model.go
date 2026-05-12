@@ -731,9 +731,6 @@ func newBaseModel(cfg Config, layoutOverride LayoutMode) Model {
 		collapse[i] = NewPanelCollapseState(pcfg.DefaultCollapsed, startH)
 	}
 
-	// Focused panel starts expanded
-	collapse[PanelNow].Expand()
-
 	mode := layoutOverride
 	if mode == "" {
 		mode = cfg.Layout.DefaultMode
