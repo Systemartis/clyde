@@ -69,6 +69,6 @@ jobs:
       # built by this exact workflow on this exact tag (SLSA Level 3 provenance
       # level when running on the GitHub-hosted ubuntu runner).
       - name: attest build provenance
-        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: 'dist/clyde_*_*.tar.gz'
