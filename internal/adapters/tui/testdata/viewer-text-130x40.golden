@@ -1,0 +1,40 @@
+ clyde · ~/projects/claude-companion · opus 4.7                                                                   1h 24m  47k tok 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+╭ explorer ─────────────────────────────────── 8 ╮╭ viewer ─────────────────────────────────────────────────────────── esc close ╮
+│ ⌕  press / to search                           ││ ◆ auth.ts  src/api/auth.ts  1.2 KB · 50 lines · 0% · VIEW                    │
+│ modified 4                                     ││ ──────────────────────────────────────────────────────────────────────────── │
+│ M api/auth.ts                           +14 −3 ││  1 │ import { verify, decode } from './jwt';                               █ │
+│ M ui/Sidebar.tsx                       +28 −12 ││  2 │ import { db } from './database';                                      │ │
+│ + ui/Mascot.tsx                            +47 ││  3 │                                                                       │ │
+│ M package.json                              +2 ││  4 │ /**                                                                   │ │
+│ ····················                           ││  5 │  * authenticate — validates a JWT token and returns the session user. │ │
+│ tree                                           ││  6 │  * Returns { ok: false, reason: string } on any failure.              │ │
+│ ▶ src                                          ││  7 │  */                                                                   │ │
+│ ▶ tests                                        ││  8 │ export async function authenticate(token: string) {                   │ │
+│ ▶ public                                       ││  9 │   if (!token) {                                                       │ │
+│   ▤ README.md                                  ││ 10 │     return { ok: false, reason: 'missing' };                          │ │
+│ M ◇ package.json                               ││ 11 │   }                                                                   │ │
+│   ◇ tsconfig.json                              ││ 12 │                                                                       │ │
+│   ◇ .gitignore                                 ││ 13 │   const decoded = await verify(token);                                │ │
+│   ◆ vite.config.ts                             ││ 14 │   if (!decoded?.sub) {                                                │ │
+│                                                ││ 15 │     return { ok: false, reason: 'expired' };                          │ │
+│                                                ││ 16 │   }                                                                   │ │
+│                                                ││ 17 │                                                                       │ │
+│                                                ││ 18 │   return { ok: true, user: decoded };                                 │ │
+│                                                ││ 19 │ }                                                                     │ │
+╰────────────────────────────────────────────────╯│ 20 │                                                                       │ │
+╭ servers ──────────────────────────────── 5 / 7 ╮│ 21 │ /**                                                                   │ │
+│ mcps · 3 / 4                                   ││ 22 │  * refreshToken — issues a new access token from a valid refresh toke │ │
+│ ● filesystem                                12 ││ 23 │  * Returns null if the refresh token is missing or expired.           │ │
+│ ● github                                     8 ││ 24 │  */                                                                   │ │
+│ ● memory                                     3 ││ 25 │ export async function refreshToken(uid: string) {                     │ │
+│     + 1 more                                   ││ 26 │   const stored = await db.get(uid);                                   │ │
+│ ················                               ││ 27 │   if (!stored?.refreshExp) return null;                               │ │
+│ lsps · 2 / 3                                   ││ 28 │   if (stored.refreshExp < now()) {                                    │ │
+│ ● tsserver                                     ││ 29 │     await db.del(uid);                                                │ │
+│ ● rust-analyzer                                ││ 30 │     return null;                                                      │ │
+│ ● pylsp                                        ││ 31 │   }                                                                   │ │
+│                                                ││ j/k ↓↑  i edit  / find  : cmd  ⌃s save  f fullscreen                         │
+╰────────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────╯
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ h commands                                                                                                          v0.6.0-proto 

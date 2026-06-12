@@ -1,0 +1,53 @@
+# Installer smoke test — runs the documented one-liner install path against
+# a real published release on both supported OSes and asserts the installed
+# binary reports the requested version.
+#
+# Manual-dispatch only: it needs a tag with published artifacts, so it can't
+# gate PRs. Run it after every rc/release tag (the release runbook lists it).
+name: installer-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to install (e.g. v1.0.0-rc.1)"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: installer-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    name: install.sh (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: run install.sh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          INSTALL_DIR="$RUNNER_TEMP/bin" sh install.sh
+
+      - name: installed binary reports the tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          out=$("$RUNNER_TEMP/bin/clyde" --version)
+          echo "$out"
+          case "$out" in
+            *"${VERSION#v}"*) echo "version matches" ;;
+            *) echo "::error::clyde --version does not mention ${VERSION#v}"; exit 1 ;;
+          esac

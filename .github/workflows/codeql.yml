@@ -1,0 +1,63 @@
+name: codeql
+
+# Static analysis for Go. Default `security-and-quality` query suite catches
+# the OWASP-style classes (path traversal, command injection, weak crypto,
+# unchecked errors that mask security failures, etc.) without the noise of
+# the experimental queries.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly drift scan — catches advisories that land in the database after
+    # our last commit touched a vulnerable code path.
+    - cron: '23 5 * * 1'
+
+# Default-deny at workflow level. The analyze job re-grants security-events
+# write so it can upload SARIF.
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  analyze:
+    name: analyze (go)
+    # CodeQL SARIF upload requires GitHub Advanced Security, which is free
+    # for public repos only. Skip on private repos so the check doesn't
+    # turn the rest of CI red — the workflow auto-enables when the repo
+    # is flipped public.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write   # SARIF upload
+      actions: read            # CodeQL reads workflow metadata
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: init codeql
+        uses: github/codeql-action/init@53e96ec3b35fce51c141c0d6f0e31028a448722d # v3
+        with:
+          languages: go
+          queries: security-and-quality
+
+      - name: build
+        run: go build ./...
+
+      - name: analyze
+        uses: github/codeql-action/analyze@53e96ec3b35fce51c141c0d6f0e31028a448722d # v3
+        with:
+          category: "/language:go"

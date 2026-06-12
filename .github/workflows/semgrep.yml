@@ -1,0 +1,55 @@
+name: semgrep
+
+# Static analysis with Semgrep's open-source Go rule packs. Complements
+# gosec (golangci-lint) and CodeQL — different rule engines catch
+# different classes. Defaults to non-blocking until we've seen one full
+# week of clean runs; flip continue-on-error: false then.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semgrep-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  semgrep:
+    name: semgrep (go + security)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Semgrep's container ships the CLI + the rule registry pre-cached.
+    container:
+      # Pin the container by tag — once we've observed a successful run we
+      # can swap to @sha256:... for full reproducibility. The Semgrep team
+      # versions every release, so the tag itself is reasonably stable.
+      image: returntocorp/semgrep:1.95.0
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: semgrep ci
+        run: |
+          # `semgrep ci` auto-selects rules appropriate to the language(s)
+          # detected. We pin the explicit pack names here so the run is
+          # reproducible across registry rule edits.
+          semgrep \
+            --config=p/golang \
+            --config=p/security-audit \
+            --config=p/secrets \
+            --error \
+            --severity=ERROR \
+            --metrics=off \
+            .
+        # Allow rule-pack churn to surface as a yellow check rather than a
+        # red one until we've calibrated against several runs. Remove this
+        # line to enforce blocking.
+        continue-on-error: true

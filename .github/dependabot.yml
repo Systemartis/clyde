@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # Go module dependencies — pinned in go.mod. Weekly cadence keeps
+  # noise low while still surfacing security advisories within ~7 days.
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - go
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # GitHub Actions referenced by .github/workflows/*. Same cadence.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: chore
+      include: scope

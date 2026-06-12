@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: "clyde — terminal companion for Claude Code"
+message: "If you use clyde in research or tooling, please cite it as below."
+type: software
+authors:
+  - name: Systemartis
+    website: "https://systemartis.com"
+  - family-names: Popescu-Bejat
+    given-names: Vlad
+  - family-names: Maicovschi
+    given-names: Maxim Tudor
+repository-code: "https://github.com/Systemartis/clyde"
+url: "https://github.com/Systemartis/clyde"
+license: MIT
+keywords:
+  - tui
+  - terminal
+  - claude
+  - claude-code
+  - bubbletea
+  - go
+abstract: >-
+  A single-binary Go TUI that tiles next to your `claude` pane and surfaces
+  per-project Claude Code session state — live sessions, tool calls, token
+  usage, todos, subagents, MCP servers — without leaving the terminal.

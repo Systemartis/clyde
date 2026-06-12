@@ -1,0 +1,65 @@
+name: scorecard
+
+# OpenSSF Scorecard — automated security posture audit. Checks 18+ practices
+# (branch protection, SAST, signed releases, vulnerability response, dep
+# pinning, etc.) and uploads a SARIF report to the repo's code-scanning tab.
+#
+# Same private-repo gate as CodeQL: SARIF upload requires GitHub Advanced
+# Security (free on public repos). Auto-enables when visibility is flipped
+# public, no further config needed.
+
+on:
+  branch_protection_rule:
+  schedule:
+    # Weekly drift scan, Tuesday 06:11 UTC. Scorecard's "Branch-Protection"
+    # check needs admin tokens to read settings via the API.
+    - cron: '11 6 * * 2'
+  push:
+    branches: [main]
+
+# Default-deny — the analyze job below explicitly grants what it needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: scorecard-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  analyze:
+    name: scorecard analysis
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # SARIF upload
+      id-token: write          # OIDC, for the `publish_results` audit trail
+      actions: read            # Reads workflow metadata
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: run analysis
+        uses: ossf/scorecard-action@99c09fe975337306107572b4fdf4db224cf8e2f2 # v2.4.3
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          # publish_results=true uploads to OpenSSF's public dashboard at
+          # https://securityscorecards.dev — needed for the badge in README.
+          publish_results: true
+
+      # Best-effort SARIF upload so a Scorecard failure shows up in the
+      # repo's security tab alongside CodeQL findings.
+      - name: upload sarif
+        uses: github/codeql-action/upload-sarif@52485aec7be33610227643b0fe83936b8b5f061a # v3
+        with:
+          sarif_file: scorecard-results.sarif
+
+      - name: upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: scorecard-results
+          path: scorecard-results.sarif
+          retention-days: 5

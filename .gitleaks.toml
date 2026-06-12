@@ -1,0 +1,39 @@
+# gitleaks config — extends the default ruleset with the token shapes clyde
+# is actually adjacent to (see SECURITY.md trust model).
+#
+# Run locally over full history before any public flip:
+#   gitleaks git --config .gitleaks.toml .
+#
+# Note: the ephemeral hookserver token is 64 hex chars. A blanket
+# [a-f0-9]{64} rule drowns in git SHAs / sha256 docs examples, so it is NOT
+# a standing rule here — grep for it manually when auditing (the token is
+# never logged or committed by construction).
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "anthropic-oauth-token"
+description = "Anthropic OAuth access/refresh token (sk-ant-oat-…)"
+regex = '''sk-ant-oat-[A-Za-z0-9_-]{20,}'''
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API key (sk-ant-api03-…)"
+regex = '''sk-ant-api[0-9]{2}-[A-Za-z0-9_-]{20,}'''
+
+[[rules]]
+id = "anthropic-token-generic"
+description = "Any other sk-ant-* shaped credential"
+regex = '''sk-ant-[A-Za-z0-9_-]{32,}'''
+
+[allowlist]
+description = "Audited non-secrets (full-history scan 2026-06-11)"
+regexes = [
+  # Claude Code's PUBLIC OAuth client ID — a published identifier baked
+  # into every Claude Code install, not a credential.
+  '''9d1c250a-e61b-44d9-88ed-5944d1962f5e''',
+  # The canonical jwt.io demo token used as a test fixture in
+  # anthropicapi/oauth_test.go (payload is the textbook sub:1234567890).
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0''',
+]

@@ -1,0 +1,40 @@
+ clyde · ~/projects/claude-companion · opus 4.7                                                                   1h 24m  47k tok 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+╭ explorer ─────────────────────────────────── 8 ╮╭ now ─────────────────────────────────────────────────────────────────────────╮
+│ ⌕  press / to search                           ││    /\_/\   ○ edit auth.ts                                                    │
+│ modified 4                                     ││   ( o.o )  14 lines staged · line 46                                         │
+│ M api/auth.ts                           +14 −3 ││   /(   )\                                                                    │
+│ M ui/Sidebar.tsx                       +28 −12 ││    _"_"_                                                                     │
+│ + ui/Mascot.tsx                            +47 │╰──────────────────────────────────────────────────────────────────────────────╯
+│ M package.json                              +2 │╔ activity ═════════════════════════════════ ▲▼ scroll · +/− resize · esc back ╗
+│ ····················                           │║ ▾ main · 4 calls · last: Read /clyde/internal/adapters/tui/proto/middleware… ║
+│ tree                                           │║       @@ −12,5 +12,9 @@ import { verify } from './jwt'                       ║
+│ ▶ src                                          │║        12 import { db } from './database';                                   ║
+│ ▶ tests                                        │║        13 import { logger } from './logger';                                 ║
+│ ▶ public                                       │║        14 + import { TokenError } from './errors';                           ║
+│   ▤ README.md                                  │║        15 + import { now } from './time';                                    ║
+│ M ◇ package.json                               │║        16                                                                    ║
+│   ◇ tsconfig.json                              │║       + 4 more hunks                                                         ║
+│   ◇ .gitignore                                 │║                                                                              ║
+│   ◆ vite.config.ts                             │║ ▼ explore-content · done · 3 calls                                           ║
+│                                                │║ ✓  Read docs/api-spec.md                                                  2s ║
+│                                                │║ ✓  Grep 'verifyToken' --type go                                           1s ║
+│                                                │║ ✓  Read internal/handler.go                                               3s ║
+│                                                │║     Read 2 · Grep 1                                                          ║
+│                                                │║                                                                              ║
+╰────────────────────────────────────────────────╯║ ▼ propose-rendering · done · 3 calls                                         ║
+╭ servers ──────────────────────────────── 5 / 7 ╮╚══════════════════════════════════════════════════════════════════════════════╝
+│ mcps · 3 / 4                                   │╭ ▸ usage: 23% · 200k · Max 5x─────────────────────────────────────────────────╮
+│ ● filesystem                                12 │╰──────────────────────────────────────────────────────────────────────────────╯
+│ ● github                                     8 │                                                                                
+│ ● memory                                     3 │                                                                                
+│     + 1 more                                   │                                                                                
+│ ················                               │                                                                                
+│ lsps · 2 / 3                                   │                                                                                
+│ ● tsserver                                     │                                                                                
+│ ● rust-analyzer                                │                                                                                
+│ ● pylsp                                        │                                                                                
+│                                                │                                                                                
+╰────────────────────────────────────────────────╯                                                                                
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ h commands                                                                                                          v0.6.0-proto 

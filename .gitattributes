@@ -1,0 +1,35 @@
+# Normalize line endings: every text file is LF in the repo, regardless of
+# OS the contributor commits from. Prevents diffs full of \r\n noise from
+# Windows clones.
+* text=auto eol=lf
+
+# Go sources, scripts, configs — explicit text.
+*.go        text eol=lf
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.md        text eol=lf
+Makefile    text eol=lf
+*.json      text eol=lf
+LICENSE     text eol=lf
+
+# Binaries and pre-generated golden outputs — never normalize.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.tar.gz    binary
+*.zip       binary
+
+# Linguist hints: keep go.sum from inflating the language stats, and don't
+# treat the install.sh one-liner as the project's primary shell content.
+go.sum              linguist-generated=true
+testdata/**         linguist-vendored=true
+internal/adapters/tui/mockdata.go linguist-generated=true
+
+# Exclude planning / analysis artifacts from `git archive` — they are local
+# work product and don't ship in the source tarball.
+analysis/   export-ignore
+plans/      export-ignore
+.planning/  export-ignore

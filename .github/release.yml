@@ -1,0 +1,38 @@
+# GitHub auto-release-notes configuration. Used by the "Generate release
+# notes" button on the Releases page and by `gh release create --generate-notes`.
+# Goreleaser's own changelog is the canonical one for tagged releases; this
+# is the fallback for ad-hoc/manual notes and for the "What's Changed" widget
+# GitHub renders on the release page even when a custom body is provided.
+
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - duplicate
+      - invalid
+    authors:
+      - dependabot
+  categories:
+    - title: Breaking changes
+      labels:
+        - "breaking-change"
+        - "type:breaking"
+    - title: Features
+      labels:
+        - "type:feature"
+        - "feat"
+    - title: Bug fixes
+      labels:
+        - "type:bug"
+        - "fix"
+    - title: Security
+      labels:
+        - "type:security"
+        - "security"
+    - title: Documentation
+      labels:
+        - "type:docs"
+        - "docs"
+    - title: Other changes
+      labels:
+        - "*"

@@ -1,0 +1,1 @@
+{"type":"user","uuid":"user-meta-001","timestamp":"2026-04-30T10:01:00.000Z","sessionId":"rendering-session","parentUuid":"","isMeta":true,"message":{"role":"user","content":"<local-command-caveat>This is a system-injected message.</local-command-caveat>"}}

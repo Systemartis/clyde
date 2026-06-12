@@ -1,0 +1,50 @@
+ clyde · ~/projects/claude-companion · opus 4.7                                                                                                                     1h 24m  47k tok 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+╭ explorer ─────── 8 ╮╭ now ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮╭ usage ─────────────────────────────────╮
+│ ⌕  /               ││    /\_/\   ○ edit auth.ts                                                                                        ││ plan  Max 5x                           │
+│ modified 4         ││   ( o.o )  14 lines staged · line 46                                                                             ││ session ctx                        23% │
+│ M api…h.ts  +14 −3 ││   /(   )\                                                                                                        ││ ▌▌▌▌▌▌▌▌▌░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│ M ui/….tsx +28 −12 ││    _"_"_                                                                                                         ││                       47k / 200k (23%) │
+│ + ui/….tsx     +47 │╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯│ 5h session                         49% │
+│ M pac…json      +2 │╭ activity ──────────────────────────────────────────────────────────────────────────── 2 agents active · 12 calls ╮│ ▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌░░░░░░░░░░░░░░░░░░░ │
+│ ·················· ││ ▾ main · 4 calls · last: Read /clyde/internal/adapters/tui/proto/middleware.ts                                   ││            186k tokens · resets 1h 31m │
+│ tree               ││       @@ −12,5 +12,9 @@ import { verify } from './jwt'                                                           ││ weekly · all models                79% │
+│ ▶ src              ││        12 import { db } from './database';                                                                       ││ ▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌░░░░░░░░ │
+│ ▶ tests            ││        13 import { logger } from './logger';                                                                     ││             1.5M tokens · resets 2d 7h │
+│ ▶ public           ││        14 + import { TokenError } from './errors';                                                               ││ next reset                      1h 31m │
+│   ▤ README.md      ││        15 + import { now } from './time';                                                                        ││ ▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌░░░░░░░░░░░ │
+│ M ◇ package.json   ││        16                                                                                                        │╰────────────────────────────────────────╯
+│   ◇ tsconfig.json  ││       + 4 more hunks                                                                                             │╭ servers ──────────────────────── 5 / 7 ╮
+│   ◇ .gitignore     ││                                                                                                                  ││ mcps · 3 / 4                           │
+│   ◆ vite.config.ts ││ ▼ explore-content · done · 3 calls                                                                               ││ ● filesystem                        12 │
+│                    ││ ✓  Read docs/api-spec.md                                                                                      2s ││ ● github                             8 │
+│                    ││ ✓  Grep 'verifyToken' --type go                                                                               1s ││ ● memory                             3 │
+│                    ││ ✓  Read internal/handler.go                                                                                   3s ││ ● playwright                           │
+│                    ││     Read 2 · Grep 1                                                                                              ││ ················                       │
+│                    ││                                                                                                                  ││ lsps · 2 / 3                           │
+│                    ││ ▼ propose-rendering · done · 3 calls                                                                             ││ ● tsserver                             │
+│                    ││ ✓  Read openspec/changes/event-rendering/spec.md                                                              2s ││ ● rust-analyzer                        │
+│                    ││ ✓  Read internal/adapters/jsonl/jsonl.go                                                                      4s ││ ● pylsp                                │
+│                    ││ ▶  Edit openspec/changes/event-rendering/proposal.md                                                          1s ││                                        │
+│                    ││     Read 2 · Edit 1                                                                                              ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││ ▼ run-tests-batch · running · 2 calls                                                                            ││                                        │
+│                    ││ ✓  Bash 'go test ./domain/...'                                                                               21s ││                                        │
+│                    ││ ▶  Bash 'go test ./adapters/...'                                                                             11s ││                                        │
+│                    ││     Bash 2                                                                                                       ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││ ▼ compaction-check · idle · 0 calls                                                                              ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+│                    ││                                                                                                                  ││                                        │
+╰────────────────────╯╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯╰────────────────────────────────────────╯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ h commands                                                                                                                                                            v0.6.0-proto 

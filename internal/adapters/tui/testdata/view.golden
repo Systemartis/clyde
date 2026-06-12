@@ -1,0 +1,7 @@
+clyde — sess-1
+─────────────────────────────────────────
+10:00:00Z   user          Hello
+10:00:05Z   assistant     Let me check the file for you.  in=6 out=825
+10:00:10Z   assistant     Tool: Read /path/to/file.go
+─────────────────────────────────────────
+q to quit
