@@ -2,37 +2,33 @@
 
 All notable changes to clyde are documented here.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the version numbers follow [Semantic Versioning](https://semver.org/).
-
-For releases on GitHub the canonical source is the auto-generated changelog goreleaser produces from conventional-commit messages. This file mirrors those release notes plus any unreleased work.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the version numbers follow [Semantic Versioning](https://semver.org/). This file is hand-curated; GitHub release notes mirror it.
 
 ## [Unreleased]
 
-### Added
-- `--version` flag prints version, commit, build date, and Go runtime; populated by goreleaser ldflags or `runtime/debug.ReadBuildInfo()` fallback.
-- `Makefile` with `verify` target that runs everything CI runs (fmt-check, vet, lint, race tests).
-- `.editorconfig` so contributor editors match gofmt indentation conventions.
-- `.goreleaser.yml` building 4 platforms (linux/darwin × amd64/arm64) with SPDX SBOMs (syft) and cosign keyless signatures over `checksums.txt`.
-- CodeQL static analysis workflow (security-and-quality query suite).
-- Snapshot-mode goreleaser job in CI that gates every PR on a working release pipeline.
-- Pre-built binary install path documented in README with sha256 + cosign verify recipes.
+## [1.0.0] - 2026-06-12
 
-### Changed
-- Hook server token-bearing URL is written to `~/.cache/clyde/hook-url` (mode 0600) instead of stderr — stops leaking the per-process auth token via copy-pasted bug reports.
-- `wrapPanelCollapsed` clamps `innerW` so the initial pre-WindowSize render no longer panics with `strings: negative Repeat count` when terminal width is 0.
-- TUI gocyclo/gocognit lint exemptions narrowed to known-shallow files only — adjacent files now lint normally.
-- All third-party GitHub Actions pinned to commit SHAs (auto-bumped weekly by Dependabot).
-- govulncheck pinned to `v1.3.0` instead of `@latest`.
-- Workflows default-deny permissions; jobs re-grant only what they need; checkouts run with `persist-credentials: false`.
+First public release. A terminal companion TUI for Claude Code: tile it next to your `claude` pane and see live sessions, tool activity, token usage and plan limits, todos, git diff, file explorer, and MCP servers — offline, no account, reading only the files Claude Code already writes.
+
+### Added
+- Multi-panel dashboard (now, activity, usage, diff, explorer, servers, bash ledger, cache efficiency) with three layouts (stack, tabs, multi-col), seven themes, mouse support, and per-panel help.
+- Plan-limit tracking: the same 5-hour and weekly percentages as claude.ai/settings/usage via the locally stored OAuth token, with a block-tiled time-elapsed fallback when offline.
+- Multi-session tabs with a Σ aggregate view and per-session context leaderboard.
+- Hook notifications: approve/deny Claude Code permission requests from the dashboard. The token-bearing callback URL lives in `~/.cache/clyde/hook-url` (0600); `clyde setup` prints the settings.json snippet.
+- `--demo` deterministic mock mode, `--crash-report` diagnostics bundle, `--version`, `--layout`, `--source`.
+- Release supply chain: 4 platforms (linux/darwin × amd64/arm64), SPDX SBOMs, cosign keyless signature over `checksums.txt`, SLSA build provenance, sha256+cosign-verifying `install.sh`.
+- Structured JSON logging to `~/.cache/clyde/clyde.log` (`CLYDE_DEBUG=1` for debug level).
 
 ### Fixed
-- Race in `hookserver.Start` between the listener goroutine and context cancel; `serveErr` is now propagated through a buffered channel.
-- Hookserver auto-allow on full event channel replaced with fail-closed deny; user re-prompts in `claude` rather than the TUI silently approving.
-- Anthropic API Keychain reader captures `security` stderr instead of discarding it, so credential-not-found errors carry diagnostic text.
-- Panic in the hookserver goroutine no longer takes down the TUI — `defer recover()` keeps the rest of clyde alive.
+- Mouse-wheel scrolling works on every scrollable panel (wheel promotes the panel to its scrollable active mode); Enter enters active mode in all layouts.
+- The activity panel follows the live tail, shows an empty-state hint, and windowing keeps the newest calls visible.
+- The usage panel's "next reset" bar tracks window time-elapsed (not quota %), picks the soonest window, anchors offline fallbacks Anthropic-style, and its countdown ticks every refresh.
+- The advertised `⌃l` layout-cycle hotkey (and `⌃e`/`⌃a`/`⌃d`/`⌃0` chords) actually work.
 
 ### Security
-- SECURITY.md documents the hook-URL-file change, supply-chain artifacts (SBOMs + cosign), and the verify recipe.
-- 5 fuzz harnesses (`testing.F`) cover the JSONL session reader, ps-output parser, git status/diff parsers, Anthropic credential reader, and Claude settings reader; CI runs each for ~15s on every PR.
+- Localhost-only hook server with per-process auth token, fail-closed on queue overflow; pending hooks auto-denied on quit.
+- Credentials are read-only: clyde never writes or refreshes the Claude Code OAuth token, and denying Keychain access degrades gracefully.
+- CI: gosec, Semgrep, CodeQL, govulncheck, gitleaks config, OpenSSF Scorecard, SHA-pinned actions, default-deny workflow permissions, fuzz harnesses on every parser.
 
-[Unreleased]: https://github.com/Systemartis/clyde/compare/v0.0.0...HEAD
+[Unreleased]: https://github.com/Systemartis/clyde/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Systemartis/clyde/releases/tag/v1.0.0
