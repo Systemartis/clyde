@@ -17,6 +17,7 @@ import (
 // width-fallback) into config.toml.
 func TestSettingsEsc_DoesNotBakeTransientLayoutOverride(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
 
 	m := NewModel()
 	m.baseCfg = DefaultConfig() // persisted default_mode == stack
@@ -42,6 +43,7 @@ func TestSettingsEsc_DoesNotBakeTransientLayoutOverride(t *testing.T) {
 // user actually makes via the overlay (Enter on the layout chip) IS persisted.
 func TestSettingsEsc_PersistsUserLayoutChange(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
 
 	m := NewModel()
 	m.baseCfg = DefaultConfig()
@@ -72,6 +74,7 @@ func TestSettingsEsc_PersistsUserLayoutChange(t *testing.T) {
 func TestLoadConfig_SanitizesInvalidLayoutMode(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("XDG_CONFIG_HOME", "")
 	dir := tmp + "/.config/clyde"
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatal(err)
@@ -94,6 +97,7 @@ func TestLoadConfig_SanitizesInvalidLayoutMode(t *testing.T) {
 func TestLoadConfig_LegacyTasksMapsToCalls(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("XDG_CONFIG_HOME", "")
 	dir := tmp + "/.config/clyde"
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatal(err)
@@ -116,6 +120,7 @@ func TestLoadConfig_LegacyTasksMapsToCalls(t *testing.T) {
 func TestLoadConfig_ExplicitCallsWinsOverLegacyTasks(t *testing.T) {
 	tmp := t.TempDir()
 	t.Setenv("HOME", tmp)
+	t.Setenv("XDG_CONFIG_HOME", "")
 	dir := tmp + "/.config/clyde"
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatal(err)
@@ -139,6 +144,7 @@ func TestLoadConfig_ExplicitCallsWinsOverLegacyTasks(t *testing.T) {
 // second writer must not clobber the first writer's untouched-by-it field.
 func TestWriteConfigFile_MergesConcurrentFieldChange(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
 
 	// Seed disk with defaults.
 	writeConfigFile(DefaultConfig())

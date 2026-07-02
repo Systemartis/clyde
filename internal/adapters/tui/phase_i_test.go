@@ -278,6 +278,7 @@ func TestSaveSettingsToConfig_WritesFile(t *testing.T) {
 	// Override home via a temp dir so we don't pollute the real config.
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
+	t.Setenv("XDG_CONFIG_HOME", "")
 
 	cfg := DefaultConfig()
 	toggles := settingsOverlayFromConfig(cfg, ScopeGlobal, "")
