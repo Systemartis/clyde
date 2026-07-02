@@ -42,6 +42,7 @@ Do **not** file public issues for security vulnerabilities. See [SECURITY.md](./
    gofmt -l .              # output should be empty
    ```
 5. **Open the PR** using the template. Link any related issue and include screencasts for TUI changes — they help reviewers a lot.
+6. **Visual change?** If you touched a panel's rendering, layout, or keybindings, re-record the affected demo tape(s) so the README GIFs stay honest — see [`demo/README.md`](./demo/README.md).
 
 We'll usually respond within a few days. If you don't hear back in a week, ping the PR.
 
