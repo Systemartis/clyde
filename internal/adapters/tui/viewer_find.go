@@ -2,6 +2,7 @@ package tui
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -36,17 +37,19 @@ func promptFieldRender(value, placeholder string, focused bool, cursor string, v
 // findMatch is a single hit inside the viewer's find results.
 type findMatch struct {
 	Line int // 0-based source line
-	Col  int // 0-based byte offset where the match starts
-	End  int // 0-based byte offset just past the match (exclusive)
+	Col  int // 0-based RUNE index where the match starts
+	End  int // 0-based RUNE index just past the match (exclusive)
 }
 
 // findInBuffer scans content for case-insensitive substring matches of
 // query. Empty query returns no matches. Pure function on (content, query)
 // so the find logic is easy to test independently of the Model.
 //
-// Iteration is byte-based (not rune-based) because the cursor / scroll
-// math elsewhere in the viewer also operates on byte offsets — keeping
-// them consistent avoids off-by-one weirdness on multi-byte runes.
+// Col/End are emitted as RUNE indices, not byte offsets: paintFindMatch (and
+// the rune-based cursor / selection painters) index into []rune(line), so a
+// byte offset would misalign the highlight on any line containing multi-byte
+// runes (é, →, CJK, …). The scan itself is byte-based (strings.Index on the
+// lowercased line); we convert the byte offset to a rune index before storing.
 func findInBuffer(content, query string) []findMatch {
 	if query == "" {
 		return nil
@@ -62,10 +65,12 @@ func findInBuffer(content, query string) []findMatch {
 				break
 			}
 			start := off + i
+			runeStart := utf8.RuneCountInString(lower[:start])
+			runeLen := utf8.RuneCountInString(lower[start : start+len(q)])
 			matches = append(matches, findMatch{
 				Line: lineIdx,
-				Col:  start,
-				End:  start + len(q),
+				Col:  runeStart,
+				End:  runeStart + runeLen,
 			})
 			off = start + 1 // step by 1 so overlapping matches still count
 		}

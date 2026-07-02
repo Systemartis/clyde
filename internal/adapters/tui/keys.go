@@ -59,7 +59,14 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// the query, not jump around).
 	if !m.viewerActive && !m.hookNotif.Active && msg.Mod == 0 && !explorerSearching {
 		if handled, model := m.handlePanelJumpKey(msg.Code); handled {
-			return model, nil
+			// In tabs mode only honor jumps to panels that live in the tab
+			// strip. Jumping to a non-tab panel (explorer/servers/bash/cache)
+			// would render that panel full-screen while the strip still
+			// highlights a tab — a desynced, misleading UI state. Ignore the
+			// jump and fall through (it becomes a harmless no-op).
+			if m.effectiveMode() != LayoutTabs || m.isTabStripPanel(model.focused) {
+				return model, nil
+			}
 		}
 	}
 	if handled, model := m.handleHookPendingKey(msg); handled {
@@ -193,6 +200,13 @@ func (m Model) handleHookPendingKey(msg tea.KeyPressMsg) (bool, Model) {
 	switch msg.Code {
 	case 'y', 'Y':
 		m.respondHook(true, "")
+		// Dismiss the overlay unconditionally. In the live path respondHook
+		// already cleared hookNotif, but the SYNTHETIC preview (Ctrl+N) has no
+		// ResponseCh, so respondHook is a no-op there and hookNotif stays
+		// Active — without notifAck the overlay would be stuck until Esc.
+		// Setting notifAck here mirrors the 'n'/Esc branches so all three
+		// responses dismiss the banner in both the live and synthetic cases.
+		m.notifAck = true
 		return true, m
 	case 'n', 'N':
 		m.respondHook(false, "denied by user")
@@ -872,6 +886,10 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) Model {
 	// Navigation keys — always available regardless of collapse state
 	switch msg.Code {
 	case tea.KeyTab:
+		if m.effectiveMode() == LayoutTabs {
+			// Tabs mode cycles within the tab strip only.
+			return m.advanceTabFocus(tabDelta(msg.Mod))
+		}
 		return m.advanceFocus(tabDelta(msg.Mod))
 	case tea.KeyUp:
 		return m.handleArrowUp()
@@ -958,12 +976,15 @@ func (m Model) explorerActivate() Model {
 	return m
 }
 
-// handleTabJump processes numeric 1-4 panel jumps in tab mode.
+// handleTabJump processes numeric tab jumps (1..N) in tabs mode. The index
+// maps directly onto the visible tab strip (m.activeTabs), so the jump keys
+// stay in lockstep with what's shown and with renderTabStatusBar's "1-N
+// jump" hint — no dead keys, no unreachable tabs.
 func (m Model) handleTabJump(code rune) Model {
-	tabPanels := []PanelID{PanelNow, PanelCalls, PanelDiff, PanelUsage}
+	tabs := m.activeTabs(m.data)
 	idx := int(code - '1')
-	if idx >= 0 && idx < len(tabPanels) {
-		m = m.setFocus(tabPanels[idx])
+	if idx >= 0 && idx < len(tabs) {
+		m = m.setFocus(tabs[idx].id)
 	}
 	return m
 }
@@ -1256,7 +1277,7 @@ func (m Model) handleArrowDown() Model {
 func (m Model) handleArrowLeft() Model {
 	switch m.effectiveMode() {
 	case LayoutTabs:
-		m = m.advanceFocus(-1)
+		m = m.advanceTabFocus(-1)
 	case LayoutMultiCol:
 		m = m.focusPrevColumn()
 	case LayoutStack:
@@ -1272,7 +1293,7 @@ func (m Model) handleArrowLeft() Model {
 func (m Model) handleArrowRight() Model {
 	switch m.effectiveMode() {
 	case LayoutTabs:
-		m = m.advanceFocus(1)
+		m = m.advanceTabFocus(1)
 	case LayoutMultiCol:
 		m = m.focusNextColumn()
 	case LayoutStack:
@@ -1295,9 +1316,16 @@ func (m Model) handleSettingsKey(msg tea.KeyPressMsg) Model {
 	switch msg.Code {
 	case tea.KeyEscape:
 		// Apply edits to baseCfg, recompute effective cfg, save to file.
-		// Layout mode + remember-layout + notification style + cost
-		// threshold all live globally — persist them all.
-		m.baseCfg.Layout.DefaultMode = m.layoutMode
+		// Remember-layout + notification style + cost threshold all live
+		// globally — persist them all.
+		//
+		// Layout mode is deliberately NOT persisted here from m.layoutMode:
+		// that field also carries transient runtime state (a --layout CLI
+		// override, or a width-driven fallback) that the user never asked to
+		// make permanent. Baking it in on every open+close would silently
+		// rewrite config.toml's default_mode. Instead the layout chip's Enter
+		// handler writes baseCfg.Layout.DefaultMode only when the user
+		// actually cycles the mode (see settingsLayoutCursor below).
 		m.baseCfg.RememberLayout = m.settingsRememberLayout
 		m.baseCfg.NotificationStyle = m.settingsNotificationStyle
 		m.baseCfg.NotifyCostThresholdUSD = m.settingsCostThreshold
@@ -1347,6 +1375,12 @@ func (m Model) handleSettingsKey(msg tea.KeyPressMsg) Model {
 			m.settingsRememberLayout = !m.settingsRememberLayout
 		case m.settingsCursor == settingsLayoutCursor:
 			m = m.cycleLayoutMode()
+			// The user explicitly changed the layout via the overlay, so this
+			// is a real preference — persist it into baseCfg now. Esc no
+			// longer copies m.layoutMode blindly (it can hold a transient CLI
+			// override), so this is the only place a user-driven layout choice
+			// reaches config.toml.
+			m.baseCfg.Layout.DefaultMode = m.layoutMode
 		case m.settingsCursor >= 0 && m.settingsCursor < len(m.settingsToggles):
 			m.settingsToggles[m.settingsCursor].Enabled = !m.settingsToggles[m.settingsCursor].Enabled
 		case m.settingsCursor >= len(m.settingsToggles) && m.settingsCursor <= startupCursorMax(m.settingsToggles):

@@ -6,10 +6,14 @@
 //
 // WARNING: These values may be stale. Verify against
 // https://www.anthropic.com/pricing before making billing decisions.
-// Last verified: 2026-04-30.
+// Last verified: 2026-07-02.
 package pricing
 
-import "github.com/Systemartis/clyde/internal/domain/usage"
+import (
+	"strings"
+
+	"github.com/Systemartis/clyde/internal/domain/usage"
+)
 
 // Model holds the pricing and context metadata for a Claude model.
 type Model struct {
@@ -32,24 +36,71 @@ type Model struct {
 
 	// ContextLimit is the maximum context window in tokens for this model.
 	// Used to compute CompactionPercent.
+	//
+	// Note: this reflects the window Claude Code runs the model with by
+	// default (200K for most models), not the API maximum. Sessions running
+	// under the 1M window are identified by the "[1m]" model-ID suffix and
+	// resolved via Lookup, which overrides ContextLimit to 1M.
 	ContextLimit int64
+
+	// OneMPremium is true for legacy models whose 1M long-context beta was
+	// billed at a premium (2× input / 1.5× output above the 200K threshold).
+	// Models from the 4.6 era onward serve the 1M window at standard
+	// per-token pricing, so their [1m] variant only changes ContextLimit.
+	OneMPremium bool
 }
 
 // Predefined models. Prices in USD/million tokens; context in tokens.
-// Sources: https://www.anthropic.com/pricing (verified 2026-04-30).
+// Sources: https://www.anthropic.com/pricing (verified 2026-07-02).
+// Cache rates follow Anthropic's standard multipliers: reads = 0.1× input,
+// 5-minute writes = 1.25× input.
 // Stale warning: update when Anthropic publishes new prices.
 var (
-	// Opus47 is claude-opus-4-7 — most capable, highest cost.
-	Opus47 = Model{
-		ID:                      "claude-opus-4-7",
-		InputPerMillion:         15.00,
-		OutputPerMillion:        75.00,
-		CacheReadPerMillion:     1.50,
-		CacheCreationPerMillion: 18.75,
+	// Fable5 is claude-fable-5 — Anthropic's top tier, above Opus.
+	// The 1M window is Fable's default and only size, at standard pricing.
+	Fable5 = Model{
+		ID:                      "claude-fable-5",
+		InputPerMillion:         10.00,
+		OutputPerMillion:        50.00,
+		CacheReadPerMillion:     1.00,
+		CacheCreationPerMillion: 12.50,
+		ContextLimit:            1_000_000,
+	}
+
+	// Opus48 is claude-opus-4-8 — current Opus generation.
+	Opus48 = Model{
+		ID:                      "claude-opus-4-8",
+		InputPerMillion:         5.00,
+		OutputPerMillion:        25.00,
+		CacheReadPerMillion:     0.50,
+		CacheCreationPerMillion: 6.25,
 		ContextLimit:            200_000,
 	}
 
-	// Sonnet46 is claude-sonnet-4-6 — balanced capability/cost.
+	// Opus47 is claude-opus-4-7 — previous Opus generation.
+	// Opus dropped to $5/$25 with the 4.5 release.
+	Opus47 = Model{
+		ID:                      "claude-opus-4-7",
+		InputPerMillion:         5.00,
+		OutputPerMillion:        25.00,
+		CacheReadPerMillion:     0.50,
+		CacheCreationPerMillion: 6.25,
+		ContextLimit:            200_000,
+	}
+
+	// Sonnet5 is claude-sonnet-5 — current Sonnet generation.
+	// Sticker price ($3/$15); the 2026 introductory discount ($2/$10
+	// through 2026-08-31) is intentionally not modeled.
+	Sonnet5 = Model{
+		ID:                      "claude-sonnet-5",
+		InputPerMillion:         3.00,
+		OutputPerMillion:        15.00,
+		CacheReadPerMillion:     0.30,
+		CacheCreationPerMillion: 3.75,
+		ContextLimit:            200_000,
+	}
+
+	// Sonnet46 is claude-sonnet-4-6 — previous Sonnet generation.
 	Sonnet46 = Model{
 		ID:                      "claude-sonnet-4-6",
 		InputPerMillion:         3.00,
@@ -59,7 +110,8 @@ var (
 		ContextLimit:            200_000,
 	}
 
-	// Sonnet45 is claude-sonnet-4-5 — previous Sonnet generation.
+	// Sonnet45 is claude-sonnet-4-5 — older Sonnet generation. Its 1M
+	// window was a long-context beta billed at a premium (see OneMPremium).
 	Sonnet45 = Model{
 		ID:                      "claude-sonnet-4-5",
 		InputPerMillion:         3.00,
@@ -67,25 +119,26 @@ var (
 		CacheReadPerMillion:     0.30,
 		CacheCreationPerMillion: 3.75,
 		ContextLimit:            200_000,
+		OneMPremium:             true,
 	}
 
 	// Haiku45 is claude-haiku-4-5 — fastest, lowest cost.
 	Haiku45 = Model{
 		ID:                      "claude-haiku-4-5",
-		InputPerMillion:         0.80,
-		OutputPerMillion:        4.00,
-		CacheReadPerMillion:     0.08,
-		CacheCreationPerMillion: 1.00,
+		InputPerMillion:         1.00,
+		OutputPerMillion:        5.00,
+		CacheReadPerMillion:     0.10,
+		CacheCreationPerMillion: 1.25,
 		ContextLimit:            200_000,
 	}
 
-	// Opus45 is claude-opus-4-5 — previous Opus generation.
+	// Opus45 is claude-opus-4-5 — the release that cut Opus to $5/$25.
 	Opus45 = Model{
 		ID:                      "claude-opus-4-5",
-		InputPerMillion:         15.00,
-		OutputPerMillion:        75.00,
-		CacheReadPerMillion:     1.50,
-		CacheCreationPerMillion: 18.75,
+		InputPerMillion:         5.00,
+		OutputPerMillion:        25.00,
+		CacheReadPerMillion:     0.50,
+		CacheCreationPerMillion: 6.25,
 		ContextLimit:            200_000,
 	}
 
@@ -104,7 +157,10 @@ var (
 // known is the registry of all models keyed by their ID.
 // Add new models here when Anthropic releases them.
 var known = map[string]Model{
+	Fable5.ID:   Fable5,
+	Opus48.ID:   Opus48,
 	Opus47.ID:   Opus47,
+	Sonnet5.ID:  Sonnet5,
 	Sonnet46.ID: Sonnet46,
 	Sonnet45.ID: Sonnet45,
 	Haiku45.ID:  Haiku45,
@@ -119,10 +175,12 @@ const oneMContextSuffix = "[1m]"
 // If the ID is not found in the pricing table, it returns a generic fallback
 // model with mid-tier pricing rather than a zero-cost model.
 //
-// 1M context variants: when id ends with "[1m]", the base model pricing is
-// used but ContextLimit is overridden to 1_000_000 and per-million prices are
-// doubled (Anthropic charges 2× for 1M context variants — best guess as of
-// 2026-04-30; verify against https://www.anthropic.com/pricing).
+// 1M context variants: when id ends with "[1m]", ContextLimit is overridden
+// to 1_000_000. Models from the 4.6 era onward serve the 1M window at
+// standard per-token pricing (no long-context premium), so prices stay at
+// the base rate; only legacy OneMPremium models (Sonnet 4.5's long-context
+// beta) apply the 2× input / 1.5× output premium, approximated flat since
+// per-request tiering isn't visible in the JSONL.
 func Lookup(id string) Model {
 	// Check for 1M context suffix and strip it for the base pricing lookup.
 	is1M := false
@@ -136,31 +194,64 @@ func Lookup(id string) Model {
 	m := lookupBase(baseID)
 
 	if is1M {
-		// Override context limit to 1M and double prices per Anthropic's 2× rule
-		// for extended-context variants. Prices as of 2026-04-30 (best guess):
-		//   Opus47 1M: $30/M input, $150/M output.
-		// TODO: verify exact 1M pricing for all models once Anthropic publishes them.
 		m.ID = id
 		m.ContextLimit = 1_000_000
-		m.InputPerMillion *= 2
-		m.OutputPerMillion *= 2
-		m.CacheReadPerMillion *= 2
-		m.CacheCreationPerMillion *= 2
+		if m.OneMPremium {
+			// Legacy long-context beta premium (2× input, 1.5× output).
+			// Cache rates scale with the input rate.
+			m.InputPerMillion *= 2
+			m.OutputPerMillion *= 1.5
+			m.CacheReadPerMillion *= 2
+			m.CacheCreationPerMillion *= 2
+		}
 	}
 
 	return m
 }
 
+// familyAlias maps a model-family prefix to the closest known Model.
+// It resolves IDs that have no exact and no date-suffixed match — a newer
+// minor version ("claude-opus-4-9"), a newer major version ("claude-sonnet-6"),
+// or a sibling tier ("claude-mythos-5", which shares Fable 5's pricing) — to
+// an EXISTING table entry for the same family instead of the generic mid-tier
+// "unknown" fallback. Each alias points at the newest known model in the tier.
+var familyAlias = []struct {
+	prefix string
+	model  Model
+}{
+	{"claude-fable-", Fable5},   // top tier
+	{"claude-mythos-", Fable5},  // Mythos shares Fable pricing/capabilities
+	{"claude-opus-", Opus48},    // newest known Opus tier
+	{"claude-sonnet-", Sonnet5}, // newest known Sonnet tier
+	{"claude-haiku-", Haiku45},  // newest known Haiku tier
+}
+
 // lookupBase returns the base Model for a given model ID (no suffix processing).
+//
+// Resolution order:
+//  1. Exact match in the known table.
+//  2. Date-suffixed known version, e.g. "claude-opus-4-7-20260115" → Opus47
+//     (a known ID followed by "-...").
+//  3. Family fallback: an unknown version of a known tier resolves to that
+//     tier's newest known entry, e.g. "claude-opus-4-8" or "claude-sonnet-5".
+//  4. Generic mid-tier "unknown" fallback for genuinely unrecognized families.
 func lookupBase(id string) Model {
 	if m, ok := known[id]; ok {
 		return m
 	}
-	// Prefix-match for forward compatibility: "claude-opus-4-8" would still
-	// match Opus pricing if an exact entry doesn't exist yet.
+	// Date-suffixed KNOWN versions: a known ID that is a "-"-delimited prefix
+	// of the incoming ID (the boundary avoids "claude-opus-4-5" matching a
+	// hypothetical "claude-opus-4-50").
 	for _, m := range known {
-		if len(id) >= len(m.ID) && id[:len(m.ID)] == m.ID {
+		if strings.HasPrefix(id, m.ID+"-") {
 			return m
+		}
+	}
+	// Family fallback: newer minor/major versions of a known tier, plus new
+	// tiers, map to the closest existing family entry.
+	for _, fa := range familyAlias {
+		if strings.HasPrefix(id, fa.prefix) {
+			return fa.model
 		}
 	}
 	return unknownModel

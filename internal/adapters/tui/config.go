@@ -18,6 +18,18 @@ const (
 	LayoutMultiCol LayoutMode = "multi-col"
 )
 
+// IsValid reports whether m is a recognized LayoutMode. Used when loading
+// config to fall back to the default if an unknown string slipped in via a
+// hand-edited TOML file (consistent with Theme / NotificationStyle /
+// MascotPersona validation).
+func (m LayoutMode) IsValid() bool {
+	switch m {
+	case LayoutStack, LayoutTabs, LayoutMultiCol:
+		return true
+	}
+	return false
+}
+
 // NotificationStyle picks the visual treatment for hook prompts and the
 // compaction-imminent warning.
 type NotificationStyle string
@@ -174,7 +186,7 @@ type LayoutConfig struct {
 type PanelsConfig struct {
 	Now      PanelConfig `toml:"now"`
 	Calls    PanelConfig `toml:"calls"` // v13: replaces tasks
-	Tasks    PanelConfig `toml:"tasks"` // kept for backward compat — maps to calls slot
+	Tasks    PanelConfig `toml:"tasks"` // legacy alias — copied onto Calls in LoadConfig when [panels.calls] is absent
 	Diff     PanelConfig `toml:"diff"`
 	Usage    PanelConfig `toml:"usage"`
 	Explorer PanelConfig `toml:"explorer"`
@@ -186,10 +198,22 @@ type PanelsConfig struct {
 // ProjectOverride is a per-project settings layer applied on top of the
 // global config when the user is launched in that working directory.
 //
-// V22 only supports panel-visibility overrides; future revisions may extend
-// to layout / theme overrides, gated by a similar map[string]string pattern.
+// Panels carries per-panel visibility overrides (enabled flag).
+// PanelLayouts carries per-panel layout overrides (manual Height and
+// DefaultCollapsed) so RememberLayout-driven persistence is scoped to
+// the project the user actually resized panels in.
 type ProjectOverride struct {
-	Panels map[string]bool `toml:"panels,omitempty"`
+	Panels       map[string]bool        `toml:"panels,omitempty"`
+	PanelLayouts map[string]PanelLayout `toml:"panel_layouts,omitempty"`
+}
+
+// PanelLayout is the per-project subset of PanelConfig that participates
+// in RememberLayout persistence. Height==0 means "no manual override";
+// DefaultCollapsed defaults to false and is omitted from the TOML when
+// it matches that zero value.
+type PanelLayout struct {
+	Height           int  `toml:"height,omitempty"`
+	DefaultCollapsed bool `toml:"default_collapsed,omitempty"`
 }
 
 // Config is the root config struct for the clyde TUI.
@@ -240,9 +264,11 @@ type Config struct {
 	Theme Theme `toml:"theme"`
 
 	// MascotPersona picks which character drives the now-panel mascot. The
-	// default ("kitten") is the cat shipped in v23+; "bunny" reverts to
-	// the v9–v22 rabbit; "off" hides the mascot block entirely for users
-	// who'd rather see the now panel as a flat status line.
+	// default ("meowl") is the cat shipped in v23+; "bowl" reverts to the
+	// v9–v22 rabbit; "off" hides the mascot block entirely for users who'd
+	// rather see the now panel as a flat status line. The legacy "kitten" /
+	// "bunny" values are still accepted on read and normalized to
+	// "meowl" / "bowl" (see MascotPersona.Normalize).
 	MascotPersona MascotPersona `toml:"mascot_persona"`
 
 	// BootScreenEnabled toggles the animated splash screen shown for
@@ -315,24 +341,52 @@ func formatCostThreshold(v float64) string {
 	return fmt.Sprintf("$%.2f", v)
 }
 
-// LoadConfig reads the TOML config at ~/.config/clyde/config.toml and
-// merges it over the defaults. If the file doesn't exist, defaults are returned.
-func LoadConfig() Config {
-	cfg := DefaultConfig()
+// configDir resolves the clyde config directory following the XDG
+// base-directory spec: $XDG_CONFIG_HOME/clyde when the variable is set,
+// ~/.config/clyde otherwise. The cache paths (hook-url, logs) already honor
+// XDG_CACHE_HOME — the config must not behave differently, or sandboxed runs
+// (tests, VHS recordings) silently read and write the user's real config.
+// Returns "" when no home directory can be determined.
+func configDir() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return xdg + "/clyde"
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
+		return ""
+	}
+	return home + "/.config/clyde"
+}
+
+// LoadConfig reads the TOML config at configDir()/config.toml and merges it
+// over the defaults. If the file doesn't exist, defaults are returned.
+func LoadConfig() Config {
+	cfg := DefaultConfig()
+	dir := configDir()
+	if dir == "" {
 		return cfg
 	}
-	path := home + "/.config/clyde/config.toml"
-	// G304: path is built from the current user's home directory + a hard-
-	// coded suffix. The user's own config file is what we're trying to load.
-	data, err := os.ReadFile(path) //nolint:gosec // see comment
+	// G304: path is the user's own XDG-resolved config location. The user's
+	// own config file is what we're trying to load.
+	data, err := os.ReadFile(dir + "/config.toml") //nolint:gosec // see comment
 	if err != nil {
 		return cfg
 	}
 	// Merge on top of defaults — TOML only overwrites keys that are present.
-	if _, err := toml.Decode(string(data), &cfg); err != nil {
+	md, err := toml.Decode(string(data), &cfg)
+	if err != nil {
 		return cfg
+	}
+	// Legacy [panels.tasks] → calls: v13 renamed the panel, but hand-written
+	// configs from before the rename only carry [panels.tasks]. Honor it by
+	// copying onto the calls slot when the user did NOT also set the modern
+	// [panels.calls] (which always wins). Files that clyde itself wrote carry
+	// both sections, so this only fires for genuine legacy input.
+	if md.IsDefined("panels", "tasks") && !md.IsDefined("panels", "calls") {
+		cfg.Panels.Calls = cfg.Panels.Tasks
+	}
+	if !cfg.Layout.DefaultMode.IsValid() {
+		cfg.Layout.DefaultMode = LayoutStack
 	}
 	if !cfg.NotificationStyle.IsValid() {
 		cfg.NotificationStyle = NotificationFullscreen
@@ -387,6 +441,7 @@ func (cfg Config) EffectiveFor(cwd string) Config {
 	}
 	out := cfg
 	out.Panels = applyPanelOverride(out.Panels, override.Panels)
+	out.Panels = applyPanelLayoutOverride(out.Panels, override.PanelLayouts)
 	return out
 }
 
@@ -395,26 +450,54 @@ func (cfg Config) EffectiveFor(cwd string) Config {
 // their global value).
 func applyPanelOverride(base PanelsConfig, over map[string]bool) PanelsConfig {
 	for name, enabled := range over {
-		switch name {
-		case "now":
-			base.Now.Enabled = enabled
-		case "calls", "tasks":
-			base.Calls.Enabled = enabled
-		case "diff":
-			base.Diff.Enabled = enabled
-		case "usage":
-			base.Usage.Enabled = enabled
-		case "explorer":
-			base.Explorer.Enabled = enabled
-		case "servers":
-			base.Servers.Enabled = enabled
-		case "bash":
-			base.Bash.Enabled = enabled
-		case "cache":
-			base.Cache.Enabled = enabled
+		if pc := panelSlotByName(&base, name); pc != nil {
+			pc.Enabled = enabled
 		}
 	}
 	return base
+}
+
+// applyPanelLayoutOverride returns a copy of base with Height and
+// DefaultCollapsed replaced for each panel listed in over. Missing keys
+// keep their global value. Height==0 in an override is treated as "clear
+// the manual override" and falls back to the base height.
+func applyPanelLayoutOverride(base PanelsConfig, over map[string]PanelLayout) PanelsConfig {
+	for name, layout := range over {
+		pc := panelSlotByName(&base, name)
+		if pc == nil {
+			continue
+		}
+		pc.DefaultCollapsed = layout.DefaultCollapsed
+		if layout.Height > 0 {
+			pc.Height = layout.Height
+		}
+	}
+	return base
+}
+
+// panelSlotByName returns a pointer to the PanelConfig slot in cfg
+// matching the TOML panel name, or nil if the name is unknown.
+// "tasks" is an alias for "calls" so legacy configs keep working.
+func panelSlotByName(cfg *PanelsConfig, name string) *PanelConfig {
+	switch name {
+	case "now":
+		return &cfg.Now
+	case "calls", "tasks":
+		return &cfg.Calls
+	case "diff":
+		return &cfg.Diff
+	case "usage":
+		return &cfg.Usage
+	case "explorer":
+		return &cfg.Explorer
+	case "servers":
+		return &cfg.Servers
+	case "bash":
+		return &cfg.Bash
+	case "cache":
+		return &cfg.Cache
+	}
+	return nil
 }
 
 // ResolveMode returns the effective LayoutMode for a given terminal width,

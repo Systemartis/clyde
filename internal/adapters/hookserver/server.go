@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -125,9 +126,26 @@ func New() (*Server, error) {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 5 * time.Minute, // long: we block until user answers
 		IdleTimeout:  120 * time.Second,
+		// Route net/http's own error output (accept failures, handler panics,
+		// TLS/connection errors) into slog instead of the default stderr
+		// logger. Writing to stderr while the TUI owns the alternate screen
+		// corrupts the Bubble Tea render.
+		ErrorLog: log.New(slogErrorWriter{}, "", 0),
 	}
 
 	return s, nil
+}
+
+// slogErrorWriter adapts net/http's *log.Logger error output to slog. It
+// resolves slog.Default at write time (not construction time) so it stays
+// correct regardless of when the process installs its logger.
+type slogErrorWriter struct{}
+
+func (slogErrorWriter) Write(p []byte) (int, error) {
+	slog.Default().Error("hookserver: server error",
+		slog.String("detail", strings.TrimSpace(string(p))),
+	)
+	return len(p), nil
 }
 
 // Port returns the port the server is bound to.

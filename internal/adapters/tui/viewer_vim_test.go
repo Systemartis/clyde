@@ -7,6 +7,20 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
+// TestEditHintLine_SelectAllHintReflectsActualKey guards the honesty of the
+// edit-mode hint bar: select-all fires only on Cmd/Super+A (⌘a); plain Ctrl+A
+// (⌃a) moves to line start. The hint must not advertise ⌃a for "all".
+func TestEditHintLine_SelectAllHintReflectsActualKey(t *testing.T) {
+	t.Parallel()
+	h := editHintLine()
+	if strings.Contains(h, "⌃a all") {
+		t.Errorf("hint advertises ⌃a for select-all, but ⌃a moves to line start; hint: %q", h)
+	}
+	if !strings.Contains(h, "⌘a all") {
+		t.Errorf("expected ⌘a all (select-all is Cmd/Super+A); hint: %q", h)
+	}
+}
+
 // loadViewerWithText prepares a Model with the viewer open on a 50-line
 // fixture document. Returns the model ready for vim key tests.
 func loadViewerWithText(t *testing.T) Model {

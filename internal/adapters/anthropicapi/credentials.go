@@ -70,23 +70,60 @@ func (c Credentials) Expired(now time.Time) bool {
 	return now.Add(skew).After(c.ExpiresAt)
 }
 
+// credSource records WHERE a set of credentials was read from. It drives the
+// refresh policy: clyde may only rotate + persist tokens it can safely write
+// back to the SAME store it read them from.
+//
+//   - sourceFile: ~/.claude/.credentials.json. clyde and Claude Code share
+//     this file, so refreshing and writing the rotated token back keeps both
+//     in sync. Refresh + persist is allowed.
+//   - sourceKeychain: the macOS Keychain, which clyde reads but cannot safely
+//     write (the read never captures the item's full attribute set, and a
+//     blind write could create a duplicate item or clobber Claude Code's
+//     entry — logging the user out of the CLI). Treated as READ-ONLY: never
+//     refresh, only re-read whatever Claude Code has placed there.
+//   - sourceNone: no credentials / unknown provenance. Never refresh.
+//
+// The zero value is sourceNone so that any credentials whose provenance we
+// did not explicitly establish are treated conservatively (no refresh).
+type credSource int
+
+const (
+	sourceNone credSource = iota
+	sourceFile
+	sourceKeychain
+)
+
+// keychainLoader reads credentials from the macOS Keychain. It is a package
+// var (not a direct call) so tests can fake the Keychain and never shell out
+// to `security` — see requirement that tests must not touch the real Keychain.
+var keychainLoader = loadFromKeychain
+
 // LoadCredentials reads OAuth state from Keychain (preferred on macOS) or the
 // ~/.claude/.credentials.json file fallback.
 //
-// Returns ports.ErrPlanUsageUnavailable when neither source has credentials.
+// Returns ErrCredentialsNotFound when neither source has credentials.
 func LoadCredentials() (Credentials, error) {
+	c, _, err := loadCredentialsWithSource()
+	return c, err
+}
+
+// loadCredentialsWithSource is LoadCredentials plus the provenance of the
+// credentials it returned, so the refresh path can apply a source-aware,
+// safety-first policy (see credSource).
+func loadCredentialsWithSource() (Credentials, credSource, error) {
 	if runtime.GOOS == "darwin" {
-		if c, err := loadFromKeychain(); err == nil {
-			return c, nil
+		if c, err := keychainLoader(); err == nil {
+			return c, sourceKeychain, nil
 		}
 		// Fall through to file on Keychain miss / error — Claude Code may
 		// have written only one of the two on this machine.
 	}
 	c, err := loadFromFile(defaultCredentialsPath())
 	if err != nil {
-		return Credentials{}, err
+		return Credentials{}, sourceNone, err
 	}
-	return c, nil
+	return c, sourceFile, nil
 }
 
 // defaultCredentialsPath returns ~/.claude/.credentials.json — clyde's only
@@ -215,7 +252,15 @@ func parseCredentialsJSON(data []byte) (Credentials, error) {
 
 // SaveCredentials writes refreshed credentials back to the file location so
 // other clyde processes (and a long-running clyde session) can pick up the
-// new tokens. Keychain is read-only from clyde; we do not touch it.
+// new tokens.
+//
+// It is ONLY called when the credentials were read from the file in the first
+// place (credSource == sourceFile). Keychain is strictly read-only from clyde:
+// when tokens originate in the Keychain we never refresh and never write here,
+// because writing the file copy would be ineffective (the next read is
+// Keychain-first on macOS) and rotating the Keychain-shared refresh token
+// could log the user out of the Claude Code CLI. See the refresh policy in
+// client.go.
 //
 // Best-effort: errors from the write are returned so callers can decide
 // whether to surface them, but the in-memory Credentials remain valid.

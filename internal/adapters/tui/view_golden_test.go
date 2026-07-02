@@ -10,6 +10,13 @@ import (
 
 var updateGolden = flag.Bool("update", false, "update golden files")
 
+// goldenVersion pins the status-bar footer version for golden snapshots.
+// The real version now comes from internal/version.Info() (which reports
+// "dev" in a test binary), so golden tests pin a stable string to stay
+// independent of build metadata — the footer output must not drift with
+// how the test binary was built.
+const goldenVersion = "v0.6.0-proto"
+
 // stripANSI removes ANSI escape sequences from a string for golden file comparison.
 // This allows the golden file to be human-readable plain text.
 func stripANSI(s string) string {
@@ -86,6 +93,7 @@ func checkGolden(t *testing.T, goldenPath, plain string) {
 // and compares it to the golden file.
 func TestProtoView_StackNarrow70x40(t *testing.T) {
 	m := NewModel() // defaults to Stack mode
+	m.version = goldenVersion
 	m.width = 70
 	m.height = 40
 	m.bp = DetectBreakpoint(70)
@@ -101,6 +109,7 @@ func TestProtoView_StackNarrow70x40(t *testing.T) {
 // explorer+servers left, now/tasks/diff/usage right). v7: images panel removed.
 func TestProtoView_StackMedium90x40(t *testing.T) {
 	m := NewModel()
+	m.version = goldenVersion
 	m.width = 90
 	m.height = 40
 	m.bp = DetectBreakpoint(90)
@@ -115,6 +124,7 @@ func TestProtoView_StackMedium90x40(t *testing.T) {
 // explorer+servers left, now/tasks/diff/usage right).
 func TestProtoView_StackMedium110x40(t *testing.T) {
 	m := NewModel()
+	m.version = goldenVersion
 	m.width = 110
 	m.height = 40
 	m.bp = DetectBreakpoint(110)
@@ -129,6 +139,7 @@ func TestProtoView_StackMedium110x40(t *testing.T) {
 // the canonical medium viewport showing the new 2-col layout + new mascot + cleaner title bar.
 func TestProtoView_StackMedium130x40(t *testing.T) {
 	m := NewModel()
+	m.version = goldenVersion
 	m.width = 130
 	m.height = 40
 	m.bp = DetectBreakpoint(130)
@@ -143,6 +154,7 @@ func TestProtoView_StackMedium130x40(t *testing.T) {
 // (the design-target size, three-column dashboard).
 func TestProtoView_MultiCol180x50(t *testing.T) {
 	m := NewModelWithConfig(DefaultConfig(), LayoutMultiCol)
+	m.version = goldenVersion
 	m.width = 180
 	m.height = 50
 	m.bp = DetectBreakpoint(180)
@@ -158,6 +170,7 @@ func TestProtoView_ViewerText130x40(t *testing.T) {
 	m.width = 130
 	m.height = 40
 	m.bp = DetectBreakpoint(130)
+	m.version = goldenVersion
 	m.focused = PanelExplorer
 	// Open auth.ts in the viewer
 	m.viewerActive = true
@@ -174,6 +187,7 @@ func TestProtoView_ViewerImageFallback130x40(t *testing.T) {
 	m.width = 130
 	m.height = 40
 	m.bp = DetectBreakpoint(130)
+	m.version = goldenVersion
 	m.focused = PanelExplorer
 	// Open logo.png in the viewer
 	m.viewerActive = true
@@ -191,6 +205,7 @@ func TestProtoView_StackMedium130x40Active(t *testing.T) {
 	m.width = 130
 	m.height = 40
 	m.bp = DetectBreakpoint(130)
+	m.version = goldenVersion
 	m.focused = PanelCalls
 	// Use a pre-settled expanded spring (startCollapsed=false starts at expandedH).
 	// This avoids waiting for spring animation to converge during the golden render.
@@ -214,6 +229,7 @@ func TestProtoView_UsageActive130x40(t *testing.T) {
 	m.width = 130
 	m.height = 40
 	m.bp = DetectBreakpoint(130)
+	m.version = goldenVersion
 	m.focused = PanelUsage
 	// Settle PanelNow at fixed height 6 (renderNow always uses panelH=6)
 	m.collapse[PanelNow] = NewPanelCollapseState(false, 6)
@@ -236,6 +252,7 @@ func TestProtoView_UsageActive130x40(t *testing.T) {
 // It now generates the multicol-180x50 golden.
 func TestProtoView_180x50(t *testing.T) {
 	m := NewModelWithConfig(DefaultConfig(), LayoutMultiCol)
+	m.version = goldenVersion
 	m.width = 180
 	m.height = 50
 	m.bp = DetectBreakpoint(180)

@@ -15,7 +15,7 @@ func TestStatus_CachesWithinTTL(t *testing.T) {
 
 	calls := 0
 	clock := time.Date(2026, 5, 3, 12, 0, 0, 0, time.UTC)
-	canned := []byte(" M file1.go\n?? file2.go\n")
+	canned := []byte(" M file1.go\x00?? file2.go\x00") // NUL-separated (git status --porcelain -z)
 
 	s := &Source{
 		now: func() time.Time { return clock },

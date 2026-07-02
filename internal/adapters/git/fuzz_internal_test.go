@@ -5,9 +5,14 @@ import "testing"
 // FuzzParseStatus exercises the porcelain --status=v1 parser against
 // arbitrary input. Contract: must not panic.
 func FuzzParseStatus(f *testing.F) {
+	// -z (NUL-separated) form, which is what Status now requests.
+	f.Add([]byte(" M file.go\x00"))
+	f.Add([]byte("?? new.go\x00"))
+	f.Add([]byte("MM modified.go\x00A  added.go\x00D  deleted.go\x00"))
+	f.Add([]byte("R  new.go\x00old.go\x00")) // rename: trailing old-path field
+	f.Add([]byte("?? café.txt\x00"))         // non-ASCII, verbatim
+	// Legacy newline form and junk — must still not panic.
 	f.Add([]byte(" M file.go\n"))
-	f.Add([]byte("?? new.go\n"))
-	f.Add([]byte("MM modified.go\nA  added.go\nD  deleted.go\n"))
 	f.Add([]byte(""))
 	f.Add([]byte("\x00\xff"))
 

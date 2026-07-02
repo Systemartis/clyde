@@ -12,7 +12,7 @@ func (m Model) renderMultiCol() string {
 	l := m.computeLayout()
 
 	titleBar := renderTitleBar(m.styles, m.palette, m.data, m.frame, l.Width, m.demoMode, m.liveView, m.liveView.LastUpdate)
-	statusBar := renderStatusBar(m.styles, l.Width, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen)
+	statusBar := renderStatusBar(m.styles, l.Width, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen, m.version)
 
 	if overlay := m.notificationOverlay(l.Width, l.GridH); overlay != "" {
 		return strings.Join([]string{titleBar, overlay, statusBar}, "\n")

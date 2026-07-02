@@ -110,13 +110,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleWindowSize applies a resize event: stores dimensions, recalculates
 // the expanded heights for all collapse springs, and syncs viewport widths so
 // scrollable panel content is re-laid out at the correct inner width.
-// (I.5: ensure resize triggers a full re-layout that respects custom panel heights.)
+//
+// Per-panel manual heights in m.panelHeights take precedence over the
+// computed default so a RememberLayout-restored layout survives the
+// startup WindowSizeMsg and subsequent terminal resizes. Each height is
+// clamped to the terminal's available rows.
 func (m Model) handleWindowSize(msg tea.WindowSizeMsg) Model {
 	m.width = msg.Width
 	m.height = msg.Height
 	m.bp = DetectBreakpoint(msg.Width)
+	maxH := float64(m.height - 8)
+	if maxH < float64(panelHeightMin) {
+		maxH = float64(panelHeightMin)
+	}
 	for i := PanelID(0); i < panelCount; i++ {
-		h := m.defaultExpandedHeight(i, m.height-9, m.bp)
+		var h float64
+		if persisted := m.panelHeights[i]; persisted > 0 {
+			h = float64(persisted)
+		} else {
+			h = m.defaultExpandedHeight(i, m.height-9, m.bp)
+		}
+		if h > maxH {
+			h = maxH
+		}
+		if h < float64(panelHeightMin) {
+			h = float64(panelHeightMin)
+		}
 		m.collapse[i].SetExpandedHeight(h)
 		// Resync each viewport so its stored content width matches the new panel width.
 		// This prevents stale-width content from clipping after a terminal resize.
@@ -473,6 +492,17 @@ func (m Model) handleHookEvent(msg hookEventMsg) (tea.Model, tea.Cmd) {
 	evt := msg.evt
 
 	keyArg := extractKeyArg(evt.Tool, evt.Args)
+
+	// A prior hook request may still be pending (the user hadn't answered yet)
+	// when a newer event arrives. Overwriting hookPendingCh without replying
+	// would orphan that request's ResponseCh — the blocked HTTP handler would
+	// hang until its write-timeout (~5 min of a wedged claude CLI). Auto-deny
+	// the superseded request so its channel is always answered exactly once.
+	// The channel is buffered (cap 1) and, by invariant, never written while
+	// non-nil, so this send cannot block.
+	if m.hookPendingCh != nil {
+		m.hookPendingCh <- hookserver.HookResponse{Allow: false, Reason: "superseded by newer request"}
+	}
 
 	m.hookNotif = HookNotification{
 		Active: true,

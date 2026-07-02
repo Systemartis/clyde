@@ -16,13 +16,13 @@ func approxEqual(a, b, epsilon float64) bool {
 // TestCost_KnownValues verifies that Cost produces the expected dollar amount
 // for a usage with known token counts against the Opus 4.7 model.
 //
-// Calculation:
+// Calculation (Opus tier — $5/$25 since Opus 4.5):
 //
-//	input:          1_000 tokens × $15.00/M  = $0.015000
-//	output:           500 tokens × $75.00/M  = $0.037500
-//	cache_read:       200 tokens × $ 1.50/M  = $0.000300
-//	cache_creation:   100 tokens × $18.75/M  = $0.001875
-//	total = $0.054675
+//	input:          1_000 tokens × $5.00/M  = $0.005000
+//	output:           500 tokens × $25.00/M = $0.012500
+//	cache_read:       200 tokens × $0.50/M  = $0.000100
+//	cache_creation:   100 tokens × $6.25/M  = $0.000625
+//	total = $0.018225
 func TestCost_KnownValues(t *testing.T) {
 	t.Parallel()
 
@@ -34,7 +34,7 @@ func TestCost_KnownValues(t *testing.T) {
 	}
 
 	got := pricing.Cost(u, pricing.Opus47)
-	want := 0.054675
+	want := 0.018225
 	if !approxEqual(got, want, 1e-9) {
 		t.Errorf("Cost() = %f; want %f", got, want)
 	}
@@ -52,19 +52,37 @@ func TestCost_ZeroUsage(t *testing.T) {
 
 // TestCost_Haiku45 spot-checks pricing for the Haiku 4.5 model.
 //
-// Calculation:
+// Calculation ($1/$5 per MTok):
 //
-//	input:  10_000 tokens × $0.80/M = $0.008000
-//	output:  5_000 tokens × $4.00/M = $0.020000
-//	total = $0.028000
+//	input:  10_000 tokens × $1.00/M = $0.010000
+//	output:  5_000 tokens × $5.00/M = $0.025000
+//	total = $0.035000
 func TestCost_Haiku45(t *testing.T) {
 	t.Parallel()
 
 	u := usage.Usage{Input: 10_000, Output: 5_000}
 	got := pricing.Cost(u, pricing.Haiku45)
-	want := 0.028
+	want := 0.035
 	if !approxEqual(got, want, 1e-9) {
 		t.Errorf("Cost(haiku) = %f; want %f", got, want)
+	}
+}
+
+// TestCost_Fable5 spot-checks pricing for the Fable 5 top tier.
+//
+// Calculation ($10/$50 per MTok):
+//
+//	input:  10_000 tokens × $10.00/M = $0.100000
+//	output:  5_000 tokens × $50.00/M = $0.250000
+//	total = $0.350000
+func TestCost_Fable5(t *testing.T) {
+	t.Parallel()
+
+	u := usage.Usage{Input: 10_000, Output: 5_000}
+	got := pricing.Cost(u, pricing.Fable5)
+	want := 0.35
+	if !approxEqual(got, want, 1e-9) {
+		t.Errorf("Cost(fable) = %f; want %f", got, want)
 	}
 }
 
@@ -152,6 +170,34 @@ func TestLookup_Known(t *testing.T) {
 	}
 }
 
+// TestLookup_CurrentGenerationRates verifies the table matches Anthropic's
+// published per-MTok rates (verified 2026-07-02): Opus tier $5/$25 since
+// Opus 4.5, Sonnet tier $3/$15, Haiku 4.5 $1/$5, Fable 5 $10/$50.
+func TestLookup_CurrentGenerationRates(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		id      string
+		wantIn  float64
+		wantOut float64
+	}{
+		{"claude-fable-5", 10.00, 50.00},
+		{"claude-opus-4-8", 5.00, 25.00},
+		{"claude-opus-4-7", 5.00, 25.00},
+		{"claude-opus-4-5", 5.00, 25.00},
+		{"claude-sonnet-5", 3.00, 15.00},
+		{"claude-sonnet-4-6", 3.00, 15.00},
+		{"claude-haiku-4-5", 1.00, 5.00},
+	}
+	for _, tt := range tests {
+		m := pricing.Lookup(tt.id)
+		if !approxEqual(m.InputPerMillion, tt.wantIn, 1e-9) || !approxEqual(m.OutputPerMillion, tt.wantOut, 1e-9) {
+			t.Errorf("Lookup(%q) = $%.2f/$%.2f per M; want $%.2f/$%.2f",
+				tt.id, m.InputPerMillion, m.OutputPerMillion, tt.wantIn, tt.wantOut)
+		}
+	}
+}
+
 // TestLookup_Unknown verifies that an unknown model ID returns a non-zero fallback.
 func TestLookup_Unknown(t *testing.T) {
 	t.Parallel()
@@ -168,7 +214,10 @@ func TestLookup_AllModels(t *testing.T) {
 	t.Parallel()
 
 	models := []pricing.Model{
+		pricing.Fable5,
+		pricing.Opus48,
 		pricing.Opus47,
+		pricing.Sonnet5,
 		pricing.Sonnet46,
 		pricing.Sonnet45,
 		pricing.Haiku45,
@@ -183,7 +232,10 @@ func TestLookup_AllModels(t *testing.T) {
 }
 
 // TestLookup_1MContextSuffix verifies that model IDs with the [1m] suffix
-// return a 1_000_000 context limit and doubled per-million prices.
+// return a 1_000_000 context limit at UNCHANGED per-token rates for models
+// where the 1M window is standard pricing (all Opus 4.6+ era models — see
+// the migration guide: "1M context window at standard API pricing with no
+// long-context premium").
 func TestLookup_1MContextSuffix(t *testing.T) {
 	t.Parallel()
 
@@ -191,14 +243,36 @@ func TestLookup_1MContextSuffix(t *testing.T) {
 	if m.ContextLimit != 1_000_000 {
 		t.Errorf("Lookup(opus-4-7[1m]).ContextLimit = %d; want 1_000_000", m.ContextLimit)
 	}
-	// Prices should be 2× the base Opus47 prices.
-	wantInput := pricing.Opus47.InputPerMillion * 2
-	if !approxEqual(m.InputPerMillion, wantInput, 1e-9) {
-		t.Errorf("Lookup(opus-4-7[1m]).InputPerMillion = %f; want %f (2× base)", m.InputPerMillion, wantInput)
+	if !approxEqual(m.InputPerMillion, pricing.Opus47.InputPerMillion, 1e-9) {
+		t.Errorf("Lookup(opus-4-7[1m]).InputPerMillion = %f; want %f (standard pricing, no 1M premium)",
+			m.InputPerMillion, pricing.Opus47.InputPerMillion)
 	}
-	wantOutput := pricing.Opus47.OutputPerMillion * 2
-	if !approxEqual(m.OutputPerMillion, wantOutput, 1e-9) {
-		t.Errorf("Lookup(opus-4-7[1m]).OutputPerMillion = %f; want %f (2× base)", m.OutputPerMillion, wantOutput)
+	if !approxEqual(m.OutputPerMillion, pricing.Opus47.OutputPerMillion, 1e-9) {
+		t.Errorf("Lookup(opus-4-7[1m]).OutputPerMillion = %f; want %f (standard pricing, no 1M premium)",
+			m.OutputPerMillion, pricing.Opus47.OutputPerMillion)
+	}
+}
+
+// TestLookup_1MPremium_Sonnet45 verifies that the legacy long-context beta
+// premium still applies to Sonnet 4.5, the one table model whose 1M window
+// was billed at a premium (2× input, 1.5× output above the 200K threshold —
+// approximated flat here since per-request tiering isn't visible in JSONL).
+func TestLookup_1MPremium_Sonnet45(t *testing.T) {
+	t.Parallel()
+
+	m := pricing.Lookup("claude-sonnet-4-5[1m]")
+	if m.ContextLimit != 1_000_000 {
+		t.Errorf("Lookup(sonnet-4-5[1m]).ContextLimit = %d; want 1_000_000", m.ContextLimit)
+	}
+	wantIn := pricing.Sonnet45.InputPerMillion * 2
+	wantOut := pricing.Sonnet45.OutputPerMillion * 1.5
+	if !approxEqual(m.InputPerMillion, wantIn, 1e-9) {
+		t.Errorf("Lookup(sonnet-4-5[1m]).InputPerMillion = %f; want %f (2× long-context premium)",
+			m.InputPerMillion, wantIn)
+	}
+	if !approxEqual(m.OutputPerMillion, wantOut, 1e-9) {
+		t.Errorf("Lookup(sonnet-4-5[1m]).OutputPerMillion = %f; want %f (1.5× long-context premium)",
+			m.OutputPerMillion, wantOut)
 	}
 }
 
@@ -261,8 +335,8 @@ func TestLookup_RealJSONLModelStrings(t *testing.T) {
 	if base.ContextLimit != 200_000 {
 		t.Errorf("Lookup(%q).ContextLimit = %d; want 200_000", baseID, base.ContextLimit)
 	}
-	if base.InputPerMillion != 15.00 {
-		t.Errorf("Lookup(%q).InputPerMillion = %f; want 15.00", baseID, base.InputPerMillion)
+	if base.InputPerMillion != 5.00 {
+		t.Errorf("Lookup(%q).InputPerMillion = %f; want 5.00", baseID, base.InputPerMillion)
 	}
 
 	// "claude-opus-4-7[1m]" is the synthesized ID produced by livesession when
@@ -271,8 +345,75 @@ func TestLookup_RealJSONLModelStrings(t *testing.T) {
 	if oneM.ContextLimit != 1_000_000 {
 		t.Errorf("Lookup(opus-4-7[1m]).ContextLimit = %d; want 1_000_000", oneM.ContextLimit)
 	}
-	if !approxEqual(oneM.InputPerMillion, 30.00, 1e-9) {
-		t.Errorf("Lookup(opus-4-7[1m]).InputPerMillion = %f; want 30.00 (2× base)", oneM.InputPerMillion)
+	if !approxEqual(oneM.InputPerMillion, 5.00, 1e-9) {
+		t.Errorf("Lookup(opus-4-7[1m]).InputPerMillion = %f; want 5.00 (standard pricing at 1M)", oneM.InputPerMillion)
+	}
+}
+
+// TestLookup_NewMinorVersion_FamilyFallback verifies that model IDs for newer
+// versions of a KNOWN family (which have no exact entry in the pricing table)
+// resolve to that family's closest known pricing instead of falling through to
+// the generic mid-tier "unknown" fallback.
+//
+// Regression for the reversed prefix-match bug: the old lookup only matched
+// when a known ID was a literal prefix of the incoming ID, so date-suffixed
+// KNOWN versions resolved but NEWER minor/major versions silently landed on
+// unknown ($3/$15) mid-tier pricing.
+func TestLookup_NewMinorVersion_FamilyFallback(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		id      string
+		wantIn  float64
+		wantOut float64
+	}{
+		{"opus-4-9 hypothetical → opus tier", "claude-opus-4-9", pricing.Opus48.InputPerMillion, pricing.Opus48.OutputPerMillion},
+		{"opus-4-8 dated → opus tier", "claude-opus-4-8-20260115", pricing.Opus48.InputPerMillion, pricing.Opus48.OutputPerMillion},
+		{"sonnet-6 hypothetical → sonnet tier", "claude-sonnet-6", pricing.Sonnet5.InputPerMillion, pricing.Sonnet5.OutputPerMillion},
+		{"haiku-4-5 dated → haiku tier", "claude-haiku-4-5-20251001", pricing.Haiku45.InputPerMillion, pricing.Haiku45.OutputPerMillion},
+		{"fable-5 dated → fable tier", "claude-fable-5-20260601", pricing.Fable5.InputPerMillion, pricing.Fable5.OutputPerMillion},
+		// Mythos 5 shares Fable 5's capabilities and pricing.
+		{"mythos-5 → fable tier", "claude-mythos-5", pricing.Fable5.InputPerMillion, pricing.Fable5.OutputPerMillion},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := pricing.Lookup(tt.id)
+			if m.InputPerMillion != tt.wantIn || m.OutputPerMillion != tt.wantOut {
+				t.Errorf("Lookup(%q) = $%.2f/$%.2f per M; want $%.2f/$%.2f (family tier, not unknown mid-tier)",
+					tt.id, m.InputPerMillion, m.OutputPerMillion, tt.wantIn, tt.wantOut)
+			}
+		})
+	}
+}
+
+// TestLookup_NewMinorVersion_1M verifies the [1m] variant of a newer minor
+// version resolves to the FAMILY price (standard 1M pricing), not the
+// mid-tier unknown price.
+func TestLookup_NewMinorVersion_1M(t *testing.T) {
+	t.Parallel()
+
+	m := pricing.Lookup("claude-opus-4-8[1m]")
+	if m.ContextLimit != 1_000_000 {
+		t.Errorf("Lookup(opus-4-8[1m]).ContextLimit = %d; want 1_000_000", m.ContextLimit)
+	}
+	if !approxEqual(m.InputPerMillion, pricing.Opus48.InputPerMillion, 1e-9) {
+		t.Errorf("Lookup(opus-4-8[1m]).InputPerMillion = %f; want %f (opus tier at standard 1M pricing)",
+			m.InputPerMillion, pricing.Opus48.InputPerMillion)
+	}
+}
+
+// TestLookup_UnknownFamily_Graceful verifies that a genuinely unknown model
+// family still falls back to the non-zero mid-tier estimate rather than $0.
+func TestLookup_UnknownFamily_Graceful(t *testing.T) {
+	t.Parallel()
+
+	for _, id := range []string{"gpt-5", "claude-mystery-9", "gemini-2-ultra"} {
+		m := pricing.Lookup(id)
+		if m.InputPerMillion == 0 && m.OutputPerMillion == 0 {
+			t.Errorf("Lookup(%q) returned zero-cost model; want non-zero mid-tier fallback", id)
+		}
 	}
 }
 

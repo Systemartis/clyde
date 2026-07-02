@@ -108,6 +108,8 @@ func TestClient_Fetch_RefreshOn401(t *testing.T) {
 
 	c := NewClientWithDeps(hc, fakeClock(now))
 	c.credsLoaded = true
+	c.credsSource = sourceFile // file-shared creds: refresh + persist is allowed
+	c.saveFile = func(Credentials) error { return nil }
 	c.credsCached = Credentials{
 		AccessToken:  "expired-but-not-yet-known",
 		RefreshToken: "rt-old",
@@ -151,6 +153,8 @@ func TestClient_Fetch_ProactiveRefreshWhenExpired(t *testing.T) {
 
 	c := NewClientWithDeps(hc, fakeClock(now))
 	c.credsLoaded = true
+	c.credsSource = sourceFile // file-shared creds: refresh + persist is allowed
+	c.saveFile = func(Credentials) error { return nil }
 	c.credsCached = Credentials{
 		AccessToken:  "stale",
 		RefreshToken: "rt",
@@ -182,6 +186,8 @@ func TestClient_Fetch_InvalidGrantSurfacesAuthError(t *testing.T) {
 
 	c := NewClientWithDeps(hc, fakeClock(now))
 	c.credsLoaded = true
+	c.credsSource = sourceFile // file source refreshes; a revoked RT → invalid_grant
+	c.saveFile = func(Credentials) error { return nil }
 	c.credsCached = Credentials{
 		AccessToken:  "stale",
 		RefreshToken: "revoked",
@@ -195,10 +201,17 @@ func TestClient_Fetch_InvalidGrantSurfacesAuthError(t *testing.T) {
 }
 
 func TestClient_Fetch_NoCredsTranslated(t *testing.T) {
-	// Cannot run in parallel — mutates HOME.
-	t.Setenv("HOME", t.TempDir()) // empty home; no credentials file
+	t.Parallel()
 
+	// Hermetic: force "no credentials" via the loader seam so the test never
+	// depends on the real Keychain (which, on a developer's macOS machine with
+	// Claude Code installed, would return live credentials and trigger a real
+	// network fetch).
 	c := NewClient()
+	c.loadCreds = func() (Credentials, credSource, error) {
+		return Credentials{}, sourceNone, ErrCredentialsNotFound
+	}
+
 	_, err := c.Fetch(context.Background())
 	if !errors.Is(err, ports.ErrPlanUsageUnavailable) {
 		t.Errorf("no creds: err = %v, want ports.ErrPlanUsageUnavailable", err)

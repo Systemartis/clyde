@@ -17,7 +17,6 @@
 package git
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -129,7 +128,11 @@ func (s *Source) Status(cwd string) ([]FileStatus, error) {
 	}
 	s.mu.Unlock()
 
-	out, err := s.gitRunner()(context.Background(), cwd, "status", "--porcelain")
+	// -z: NUL-separated records with verbatim (never C-quoted) paths, so
+	// non-ASCII and space-containing filenames survive intact. Without -z,
+	// git wraps such paths in double quotes with octal escapes
+	// (e.g. "caf\303\251.txt"), which parseStatus would surface verbatim.
+	out, err := s.gitRunner()(context.Background(), cwd, "status", "--porcelain", "-z")
 	if err != nil {
 		// Not a repo or git not available — degrade gracefully. Cache
 		// the empty result so we don't keep retrying every tick when
@@ -209,28 +212,32 @@ func capStderr(b []byte) string {
 	return strings.TrimSpace(string(out))
 }
 
-// parseStatus parses the output of `git status --porcelain` line by line.
-// Porcelain v1 format: XY <path> (or XY <orig> -> <path> for renames).
-// We only care about the XY codes and the final path.
+// parseStatus parses the NUL-separated output of `git status --porcelain -z`.
+//
+// Each record is "XY <path>" (2 status bytes, a space, then the verbatim path,
+// which -z leaves unquoted). Rename/copy entries ('R'/'C') emit the original
+// path as a SEPARATE trailing NUL field — format "XY <new>\0<old>\0" — which
+// we consume and discard, keeping only the new path. We care only about the XY
+// codes and the final path.
 func parseStatus(raw []byte) []FileStatus {
 	var out []FileStatus
-	sc := bufio.NewScanner(bytes.NewReader(raw))
-	for sc.Scan() {
-		line := sc.Text()
-		if len(line) < 3 {
+	fields := strings.Split(string(raw), "\x00")
+	for i := 0; i < len(fields); i++ {
+		f := fields[i]
+		// A valid record is at least "XY " + one path byte. Shorter fields are
+		// the empty trailing field after the final NUL, or malformed input.
+		if len(f) < 4 {
 			continue
 		}
-		x := rune(line[0]) // index status
-		y := rune(line[1]) // worktree status
-		// Path starts at column 3 (after "XY ").
-		path := strings.TrimSpace(line[3:])
+		x := rune(f[0]) // index status
+		y := rune(f[1]) // worktree status
+		// Path starts at index 3 (after the "XY " prefix); verbatim, no unquote.
+		path := f[3:]
 
-		// Renames: "old -> new" — keep only the new path.
-		if strings.Contains(path, " -> ") {
-			parts := strings.SplitN(path, " -> ", 2)
-			if len(parts) == 2 {
-				path = parts[1]
-			}
+		// Rename/copy entries carry the original path in the next NUL field;
+		// skip it so it is not parsed as its own entry.
+		if x == 'R' || x == 'C' || y == 'R' || y == 'C' {
+			i++
 		}
 
 		// Untracked files: XY == "??"

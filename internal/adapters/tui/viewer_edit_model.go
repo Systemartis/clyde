@@ -140,6 +140,12 @@ func (m Model) enterEditMode() Model {
 	}
 	m.viewerMode = ViewerEdit
 	m.viewerStatus = ""
+	// Drop any find-match highlights carried over from view mode. They were
+	// computed against the pre-edit content; keeping them would paint stale
+	// cyan/pink spans over unrelated text as the buffer mutates (and the
+	// renderer no longer paints them in edit mode anyway).
+	m.viewerFindMatches = nil
+	m.viewerFindIdx = 0
 	return m
 }
 

@@ -28,8 +28,12 @@ func (m Model) activeTabs(d MockData) []tabDef {
 	}
 	callsSummary := fmt.Sprintf("%d done · %d active", callsDone, callsActive)
 
+	// PanelNow is deliberately NOT a tab: it is non-selectable (no scroll,
+	// no actions — see panelIsSelectable), so setFocus rejects it and it
+	// could never be brought into the full-panel view. Listing it as tab 1
+	// left an advertised tab whose jump key was a dead no-op. The now-panel
+	// content still surfaces in the stack / multi-col layouts.
 	tabs := []tabDef{
-		{PanelNow, "now", "◐ writing"},
 		{PanelCalls, "activity", callsSummary},
 	}
 	if m.panelEnabled(PanelDiff) {
@@ -37,6 +41,18 @@ func (m Model) activeTabs(d MockData) []tabDef {
 	}
 	tabs = append(tabs, tabDef{PanelUsage, "usage", fmt.Sprintf("%d%%", d.TokenPct)})
 	return tabs
+}
+
+// activeTabIndex returns the strip index of the currently focused tab, or
+// 0 when the focused panel is not in the strip (keeps the highlight and
+// the shown panel from disagreeing).
+func activeTabIndex(tabs []tabDef, focused PanelID) int {
+	for i, t := range tabs {
+		if t.id == focused {
+			return i
+		}
+	}
+	return 0
 }
 
 // renderTabs renders Mode B — tab strip with full-focus single panel.
@@ -47,7 +63,11 @@ func (m Model) renderTabs() string {
 	titleH := 2
 	tabStripH := 1
 	notifH := notificationHeight(m.cfg.NotificationStyle, m.notifAck, m.hookNotif, m.compaction, m.quotaNotif)
-	statusH := statusBarHeight(m.helpOpen)
+	// The tab status bar (renderTabStatusBar) is ALWAYS 2 rows — it has no
+	// help-expanded form. Reserving statusBarHeight(helpOpen)=4 when help
+	// is open would under-fill the panel by 2 rows, leaving a gap at the
+	// bottom. Budget exactly what we render.
+	statusH := 2
 	chromH := titleH + tabStripH + notifH + statusH
 
 	panelH := h - chromH
@@ -55,30 +75,27 @@ func (m Model) renderTabs() string {
 		panelH = 6
 	}
 
+	tabs := m.activeTabs(m.data)
+	activeIdx := activeTabIndex(tabs, m.focused)
+	// shown is always a strip panel: focus is constrained to the strip in
+	// tabs mode (advanceTabFocus / gated jumps), but if focus somehow sits
+	// off-strip (e.g. entering tabs mode from the explorer) fall back to the
+	// first tab so the highlight and the shown panel never disagree.
+	shown := tabs[activeIdx].id
+
 	titleBar := renderTitleBar(m.styles, m.palette, m.data, m.frame, w, m.demoMode, m.liveView, m.liveView.LastUpdate)
 	notification := renderNotificationMaybe(m.styles, m.palette, w, m.cfg.NotificationStyle, m.notifAck, m.hookNotif, m.compaction, m.quotaNotif)
-	statusBar := renderTabStatusBar(m.styles, w, int(m.focused), 4)
+	statusBar := renderTabStatusBar(m.styles, w, activeIdx, len(tabs), m.version)
 
 	if overlay := m.notificationOverlay(w, panelH+tabStripH); overlay != "" {
 		return strings.Join([]string{titleBar, overlay, statusBar}, "\n")
 	}
 
-	tabs := m.activeTabs(m.data)
-
-	// Find active tab index
-	activeIdx := 0
-	for i, tab := range tabs {
-		if tab.id == m.focused {
-			activeIdx = i
-			break
-		}
-	}
-
 	// Build tab strip
 	tabStrip := renderTabStrip(m.styles, tabs, activeIdx, w)
 
-	// Render the focused panel full-width
-	panel := m.renderExpandedPanel(m.focused, w, panelH, true)
+	// Render the shown panel full-width
+	panel := m.renderExpandedPanel(shown, w, panelH, true)
 
 	parts := []string{titleBar, tabStrip, panel}
 	if notification != "" {

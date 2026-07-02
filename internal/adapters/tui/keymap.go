@@ -4,32 +4,47 @@ import (
 	"charm.land/bubbles/v2/key"
 )
 
-// KeyMap is the central keybinding registry for the clyde prototype.
-// Driven by bubbles/v2/key so the help widget gets bindings for free.
+// KeyMap is the central keybinding registry for clyde. It documents the
+// bindings the dashboard actually dispatches — every entry here must have a
+// live handler (handleKey/handleCtrl/handlePanelJumpKey); dead declarations
+// mislead the help surfaces.
 type KeyMap struct {
-	Quit          key.Binding
-	Tab           key.Binding
-	ShiftTab      key.Binding
-	Space         key.Binding
-	Up            key.Binding
-	Down          key.Binding
-	Left          key.Binding
-	Right         key.Binding
-	Enter         key.Binding
-	Backspace     key.Binding
-	Esc           key.Binding
-	CollapseAll   key.Binding
-	CycleMode     key.Binding
-	FocusExplorer key.Binding
-	FocusCalls    key.Binding // ⌃a — activity/calls panel (replaces ⌃t tasks in v13)
-	FocusDiff     key.Binding
+	Quit      key.Binding
+	Tab       key.Binding
+	ShiftTab  key.Binding
+	Space     key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	Left      key.Binding
+	Right     key.Binding
+	Enter     key.Binding
+	Backspace key.Binding
+	Esc       key.Binding
+
+	// ⌃-prefixed chords dispatched by handleCtrl.
+	CycleMode     key.Binding // ⌃l — cycle layout mode
+	CollapseAll   key.Binding // ⌃0 — collapse every panel except the focused one
+	FocusExplorer key.Binding // ⌃e — focus explorer
+	FocusCalls    key.Binding // ⌃a — focus activity/calls
+	FocusDiff     key.Binding // ⌃d — focus diff
+
 	// Resize bindings — grow/shrink the focused expanded panel
 	PanelGrow   key.Binding // + or = → increase panel height by 1
 	PanelShrink key.Binding // - → decrease panel height by 1
-	// Explorer bindings
-	ExplorerFilter key.Binding // / — filter (v7 placeholder)
 
-	// Numeric panel jumps for Tab mode (1-9)
+	// Session cycling across the footer session-tab strip ([ / ]).
+	SessionPrev key.Binding // [ — previous session tab
+	SessionNext key.Binding // ] — next session tab
+
+	// PanelJump documents the plain-letter panel jumps dispatched by
+	// handlePanelJumpKey (e/a/d/u/s/b/c).
+	PanelJump key.Binding
+
+	// Overlays.
+	Help     key.Binding // h — per-panel help cheat-sheet
+	Settings key.Binding // ? — settings overlay (also cycles layout)
+
+	// Numeric tab jumps for tabs mode (1..N).
 	Jump1 key.Binding
 	Jump2 key.Binding
 	Jump3 key.Binding
@@ -83,13 +98,13 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("esc"),
 			key.WithHelp("esc", "dismiss notification"),
 		),
-		CollapseAll: key.NewBinding(
-			key.WithKeys("ctrl+0"),
-			key.WithHelp("⌃0", "collapse others"),
-		),
 		CycleMode: key.NewBinding(
 			key.WithKeys("ctrl+l"),
 			key.WithHelp("⌃l", "cycle layout"),
+		),
+		CollapseAll: key.NewBinding(
+			key.WithKeys("ctrl+0"),
+			key.WithHelp("⌃0", "collapse others"),
 		),
 		FocusExplorer: key.NewBinding(
 			key.WithKeys("ctrl+e"),
@@ -111,9 +126,25 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("-"),
 			key.WithHelp("-", "shrink panel"),
 		),
-		ExplorerFilter: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp("/", "filter (v7)"),
+		SessionPrev: key.NewBinding(
+			key.WithKeys("["),
+			key.WithHelp("[", "prev session"),
+		),
+		SessionNext: key.NewBinding(
+			key.WithKeys("]"),
+			key.WithHelp("]", "next session"),
+		),
+		PanelJump: key.NewBinding(
+			key.WithKeys("e", "a", "d", "u", "s", "b", "c"),
+			key.WithHelp("e a d u s b c", "jump to panel"),
+		),
+		Help: key.NewBinding(
+			key.WithKeys("h"),
+			key.WithHelp("h", "help"),
+		),
+		Settings: key.NewBinding(
+			key.WithKeys("?"),
+			key.WithHelp("?", "settings"),
 		),
 		Jump1: key.NewBinding(key.WithKeys("1")),
 		Jump2: key.NewBinding(key.WithKeys("2")),
@@ -122,9 +153,10 @@ func DefaultKeyMap() KeyMap {
 	}
 }
 
-// ShortHelp implements help.KeyMap for the bubbles/v2/help widget.
+// ShortHelp implements help.KeyMap for the bubbles/v2/help widget. Lists
+// only keys that are actually dispatched today.
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Tab, k.Up, k.Enter, k.Space, k.CycleMode, k.Quit}
+	return []key.Binding{k.Tab, k.Up, k.Enter, k.Space, k.Help, k.Quit}
 }
 
 // FullHelp implements help.KeyMap.
@@ -134,8 +166,8 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Tab, k.ShiftTab, k.Up, k.Down, k.Left, k.Right},
 		{k.Enter, k.Backspace, k.Space, k.CollapseAll, k.Esc},
-		{k.PanelGrow, k.PanelShrink},
-		{k.FocusExplorer, k.FocusCalls, k.FocusDiff},
-		{k.CycleMode, k.Quit},
+		{k.PanelGrow, k.PanelShrink, k.SessionPrev, k.SessionNext},
+		{k.PanelJump, k.FocusExplorer, k.FocusCalls, k.FocusDiff},
+		{k.CycleMode, k.Help, k.Settings, k.Quit},
 	}
 }

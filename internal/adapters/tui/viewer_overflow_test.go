@@ -3,10 +3,51 @@ package tui
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 )
+
+// TestRenderViewerLine_HorizontalScrollRuneAware is the regression for the
+// reported bug: horizontal scroll (xOff) byte-sliced non-highlighted / diff
+// lines, cutting through multi-byte runes and emitting invalid UTF-8. Every
+// branch (added, removal-adjacent, plain fallback) must slice by cells/runes.
+func TestRenderViewerLine_HorizontalScrollRuneAware(t *testing.T) {
+	t.Parallel()
+	plain := lipgloss.NewStyle()
+	st := viewerLineStyles{
+		dimNum: plain, codeStyle: plain,
+		addedNum: plain, addedSep: plain, addedCode: plain,
+		removedNum: plain, removedSep: plain, removedCode: plain,
+	}
+	cases := []struct {
+		name           string
+		added, removed map[int]bool
+	}{
+		{"plain-fallback", nil, nil},
+		{"added-line", map[int]bool{1: true}, nil},
+		{"removal-adjacent", nil, map[int]bool{1: true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			// "café: foobar" — byte offset 4 lands inside the 2-byte 'é'.
+			// xOff is a CELL count: 4 cells drops "café" and leaves ": foobar".
+			out := renderViewerLine("café: foobar", "", 1, 2, 4, st, tc.added, tc.removed)
+			got := stripANSI(out)
+			if !utf8.ValidString(got) {
+				t.Fatalf("row not valid UTF-8 after horizontal scroll: %q", got)
+			}
+			if !strings.Contains(got, ": foobar") {
+				t.Errorf("expected tail %q, got %q", ": foobar", got)
+			}
+			if strings.Contains(got, "café") {
+				t.Errorf("café should have scrolled off at xOff=4 cells, got %q", got)
+			}
+		})
+	}
+}
 
 // TestViewerOverflow_LongLineDoesNotExceedPanel is a regression test for the
 // reported bug: long lines in Go files push the panel right border off

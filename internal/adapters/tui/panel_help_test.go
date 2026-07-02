@@ -166,8 +166,8 @@ func TestHelp_FooterShowsGlobalsWhenHelpOpen(t *testing.T) {
 	t.Parallel()
 	m := NewModel()
 
-	closed := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, false))
-	open := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, true))
+	closed := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, false, m.version))
+	open := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, true, m.version))
 
 	if !strings.Contains(closed, "commands") {
 		t.Errorf("closed-help footer should advertise `h commands`; got:\n%s", closed)
@@ -191,7 +191,7 @@ func TestHelp_FooterShowsGlobalsWhenHelpOpen(t *testing.T) {
 func TestHelp_FooterDropsRetiredHints(t *testing.T) {
 	t.Parallel()
 	m := NewModel()
-	open := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, true))
+	open := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, true, m.version))
 
 	for _, gone := range []string{"⌃l", "⌃0", "fold all"} {
 		if strings.Contains(open, gone) {
@@ -275,7 +275,7 @@ func TestHelp_BackspaceClosesOverlay(t *testing.T) {
 func TestHelp_FooterContainsGlobalNav(t *testing.T) {
 	t.Parallel()
 	m := NewModel()
-	open := stripANSI(renderStatusBar(m.styles, 200, false, "", nil, true))
+	open := stripANSI(renderStatusBar(m.styles, 200, false, "", nil, true, m.version))
 
 	for _, want := range []string{"focus", "columns", "expand", "collapse", "tab", "session", "esc", "settings", "quit"} {
 		if !strings.Contains(open, want) {
@@ -306,7 +306,7 @@ func TestStatusBarHeight_ExpandsWhenHelpOpen(t *testing.T) {
 func TestHelp_FooterRendersThreeGroupedRows(t *testing.T) {
 	t.Parallel()
 	m := NewModel()
-	footer := renderStatusBar(m.styles, 120, false, "", nil, true)
+	footer := renderStatusBar(m.styles, 120, false, "", nil, true, m.version)
 	got := strings.Count(footer, "\n") + 1
 	if got != 4 {
 		t.Errorf("help-mode footer rendered %d rows; want 4", got)

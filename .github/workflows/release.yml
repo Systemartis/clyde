@@ -65,8 +65,9 @@ jobs:
       #
       # This complements cosign's signature on checksums.txt: cosign proves
       # the manifest's authenticity, the attestation proves each binary was
-      # built by this exact workflow on this exact tag (SLSA Level 3 provenance
-      # level when running on the GitHub-hosted ubuntu runner).
+      # built by this exact workflow on this exact tag (SLSA Build Level 2
+      # provenance on the GitHub-hosted ubuntu runner; Level 3 would require
+      # the slsa-framework reusable-workflow generator — see SUPPLY_CHAIN.md).
       # Attestation persistence is a GitHub feature gated to PUBLIC repos
       # (404 "upgrade billing plan or make this repository public" on
       # private) — proven by the v1.0.0-rc.1 run. Skip while private so

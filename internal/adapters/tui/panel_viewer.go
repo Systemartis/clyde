@@ -324,8 +324,11 @@ func (m Model) renderTextViewer(s Styles, p Palette, path string, width, height 
 
 	// Paint find-match highlights. Each match on a visible line gets a
 	// background overlay; the focused match (m.viewerFindIdx) is bold so
-	// the user can tell which one the viewport jumped to.
-	if len(m.viewerFindMatches) > 0 {
+	// the user can tell which one the viewport jumped to. Only in view mode:
+	// find is a view-mode feature, and the match offsets are computed against
+	// the view-mode content — painting them while editing would anchor stale
+	// highlights on text the user is actively mutating.
+	if m.viewerMode != ViewerEdit && len(m.viewerFindMatches) > 0 {
 		for i, match := range m.viewerFindMatches {
 			row := match.Line - yOff
 			if row < 0 || row >= len(visible) {
@@ -441,7 +444,9 @@ func (m Model) renderTextViewer(s Styles, p Palette, path string, width, height 
 			m.viewerFindFocusReplace, cursor, textStyle, fadeStyle,
 		)
 		hintRow = findGlyph + findField + "\n" + replaceGlyph + replaceField + hint
-	} else if len(m.viewerFindMatches) > 0 {
+	} else if m.viewerMode != ViewerEdit && len(m.viewerFindMatches) > 0 {
+		// Find is a view-mode feature; don't surface the match-index hint
+		// ("/query [n/N] …") while editing — the edit hint bar owns that row.
 		idxStyle := lipgloss.NewStyle().Foreground(p.Cyan)
 		hintRow = idxStyle.Render(fmt.Sprintf("/%s  [%d/%d]  n next  N prev",
 			m.viewerFindQuery, m.viewerFindIdx+1, len(m.viewerFindMatches)))
@@ -475,52 +480,47 @@ type viewerLineStyles struct {
 // channel for a user scanning a viewer in clyde.
 //
 // The styled argument is the pre-highlighted line (chroma output) or "" when
-// we have no lexer for this file. Horizontal scrolling on styled lines uses
-// ansi.TruncateLeft so we never slice through an SGR escape; on raw lines
-// plain byte slicing is safe because there are no escapes to corrupt.
+// we have no lexer for this file. Horizontal scrolling uses ansi.TruncateLeft
+// on every branch: it is cell/rune-aware, so it neither slices through an SGR
+// escape on styled lines nor cuts a multi-byte UTF-8 rune in half on raw /
+// diff lines (plain byte slicing did the latter, emitting mojibake on lines
+// containing é, →, CJK, …).
 func renderViewerLine(raw, styled string, lineNo, numWidth, xOff int, st viewerLineStyles, added, removalAdjacent map[int]bool) string {
 	switch {
 	case added[lineNo]:
-		display := raw
-		if xOff >= len(display) {
-			display = ""
-		} else if xOff > 0 {
-			display = display[xOff:]
-		}
+		display := scrollLeft(raw, xOff)
 		return st.addedNum.Render(fmt.Sprintf("%*d", numWidth, lineNo)) +
 			st.addedSep.Render(" │ ") +
 			st.addedCode.Render(display)
 	case removalAdjacent[lineNo]:
-		display := raw
-		if xOff >= len(display) {
-			display = ""
-		} else if xOff > 0 {
-			display = display[xOff:]
-		}
+		display := scrollLeft(raw, xOff)
 		return st.removedNum.Render(fmt.Sprintf("%*d", numWidth, lineNo)) +
 			st.removedSep.Render(" │ ") +
 			st.removedCode.Render(display)
 	}
 
 	if styled != "" {
-		display := styled
-		if xOff > 0 {
-			display = ansi.TruncateLeft(display, xOff, "")
-		}
+		display := scrollLeft(styled, xOff)
 		return st.dimNum.Render(fmt.Sprintf("%*d", numWidth, lineNo)) +
 			st.dimNum.Render(" │ ") +
 			display
 	}
 
-	display := raw
-	if xOff >= len(display) {
-		display = ""
-	} else if xOff > 0 {
-		display = display[xOff:]
-	}
+	display := scrollLeft(raw, xOff)
 	return st.dimNum.Render(fmt.Sprintf("%*d", numWidth, lineNo)) +
 		st.dimNum.Render(" │ ") +
 		st.codeStyle.Render(display)
+}
+
+// scrollLeft drops the first xOff display cells from a viewer line, keeping the
+// cut rune- and SGR-aware. ansi.TruncateLeft treats xOff as a cell count and
+// never splits a multi-byte rune, so raw / diff lines with non-ASCII content
+// scroll cleanly instead of emitting a partial-UTF-8 replacement glyph.
+func scrollLeft(line string, xOff int) string {
+	if xOff <= 0 {
+		return line
+	}
+	return ansi.TruncateLeft(line, xOff, "")
 }
 
 // viewerDiffMapsFor picks the right diff source for the viewer file and
@@ -985,16 +985,43 @@ func fileBasename(path string) string {
 	return parts[len(parts)-1]
 }
 
-// normalizePath strips leading "src/" and similar prefixes for mock lookup.
+// normalizePath canonicalizes a viewer path for mock-content lookup. Mock keys
+// are stored as full project-relative paths (e.g. "src/api/auth.ts"), so the
+// only normalization needed is stripping a leading "./".
 func normalizePath(path string) string {
 	return strings.TrimPrefix(path, "./")
 }
 
-// mockFileContent is the lookup table for openable mock files.
+// mockFileContent is the lookup table for openable mock files. Keys cover every
+// entry a user can open in demo mode: the tree leaves (keyed by their full
+// FullPath) and the "modified" list (keyed by its shorter Path form, e.g.
+// "api/auth.ts"), which the explorer renders verbatim. Search results reuse
+// these same paths. Keeping both key forms means no openable entry falls
+// through to the "(no mock content …)" placeholder.
 var mockFileContent = map[string]string{
-	"src/api/auth.ts": authTSContent,
-	"README.md":       readmeMDContent,
-	"public/logo.png": "", // image — handled by renderImageViewer
+	// Tree leaves — full project-relative paths.
+	"src/api/auth.ts":       authTSContent,
+	"src/api/routes.ts":     routesTSContent,
+	"src/api/middleware.ts": middlewareTSContent,
+	"src/ui/Sidebar.tsx":    sidebarTSXContent,
+	"src/ui/Mascot.tsx":     mascotTSXContent,
+	"src/ui/Header.tsx":     headerTSXContent,
+	"src/ui/Button.tsx":     buttonTSXContent,
+	"src/index.ts":          indexTSContent,
+	"src/App.tsx":           appTSXContent,
+	"tests/auth.test.ts":    authTestContent,
+	"tests/routes.test.ts":  routesTestContent,
+	"README.md":             readmeMDContent,
+	"package.json":          packageJSONContent,
+	"tsconfig.json":         tsconfigJSONContent,
+	".gitignore":            gitignoreContent,
+	"vite.config.ts":        viteConfigContent,
+	"public/logo.png":       "", // image — handled by renderImageViewer
+
+	// "modified" list short paths (explorer renders these verbatim).
+	"api/auth.ts":    authTSContent,
+	"ui/Sidebar.tsx": sidebarTSXContent,
+	"ui/Mascot.tsx":  mascotTSXContent,
 }
 
 // authTSContent is the mock content for src/api/auth.ts — matches the diff fixture.
@@ -1085,6 +1112,230 @@ go build ./cmd/clyde
 | Ctrl+L    | Cycle layout mode   |
 | q         | Quit                |
 `
+
+// routesTSContent is the mock content for src/api/routes.ts.
+const routesTSContent = `import { authenticate, refreshToken } from './auth';
+import { requireAuth } from './middleware';
+
+export const routes = {
+  'POST /login': async (body: { token: string }) => authenticate(body.token),
+  'POST /refresh': requireAuth(async (uid: string) => refreshToken(uid)),
+  'GET /health': async () => ({ ok: true }),
+};`
+
+// middlewareTSContent is the mock content for src/api/middleware.ts.
+const middlewareTSContent = `import { verifyToken } from './auth';
+
+// requireAuth wraps a handler so it only runs for a valid bearer token.
+export function requireAuth<T>(handler: (uid: string) => Promise<T>) {
+  return async (req: { headers: Record<string, string> }) => {
+    const header = req.headers['authorization'] ?? '';
+    const token = header.replace(/^Bearer\s+/i, '');
+    const decoded = verifyToken(token);
+    if (!decoded?.sub) {
+      return { ok: false, reason: 'unauthorized' };
+    }
+    return handler(decoded.sub);
+  };
+}`
+
+// sidebarTSXContent is the mock content for src/ui/Sidebar.tsx.
+const sidebarTSXContent = `import { useState } from 'react';
+import { Header } from './Header';
+import { Button } from './Button';
+
+export interface SidebarProps {
+  items: string[];
+  onSelect: (item: string) => void;
+}
+
+export function Sidebar({ items, onSelect }: SidebarProps) {
+  const [active, setActive] = useState(0);
+  return (
+    <nav className="sidebar">
+      <Header title="Files" />
+      <ul>
+        {items.map((item, i) => (
+          <li key={item} data-active={i === active}>
+            <Button
+              label={item}
+              onClick={() => {
+                setActive(i);
+                onSelect(item);
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}`
+
+// mascotTSXContent is the mock content for src/ui/Mascot.tsx.
+const mascotTSXContent = `import { useEffect, useState } from 'react';
+
+type Mood = 'idle' | 'working' | 'happy';
+
+const FRAMES: Record<Mood, string> = {
+  idle: '(=^.^=)',
+  working: '(=o.o=)',
+  happy: '(=^.^=)~',
+};
+
+export function Mascot({ mood }: { mood: Mood }) {
+  const [blink, setBlink] = useState(false);
+  useEffect(() => {
+    const id = setInterval(() => setBlink((b) => !b), 800);
+    return () => clearInterval(id);
+  }, []);
+  return <pre className="mascot">{blink ? '(=-.-=)' : FRAMES[mood]}</pre>;
+}`
+
+// headerTSXContent is the mock content for src/ui/Header.tsx.
+const headerTSXContent = `export interface HeaderProps {
+  title: string;
+  subtitle?: string;
+}
+
+export function Header({ title, subtitle }: HeaderProps) {
+  return (
+    <header className="header">
+      <h1>{title}</h1>
+      {subtitle ? <p className="subtitle">{subtitle}</p> : null}
+    </header>
+  );
+}`
+
+// buttonTSXContent is the mock content for src/ui/Button.tsx.
+const buttonTSXContent = `import type { MouseEventHandler } from 'react';
+
+export interface ButtonProps {
+  label: string;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
+}
+
+export function Button({ label, onClick, disabled }: ButtonProps) {
+  return (
+    <button className="btn" onClick={onClick} disabled={disabled}>
+      {label}
+    </button>
+  );
+}`
+
+// indexTSContent is the mock content for src/index.ts.
+const indexTSContent = `import { routes } from './api/routes';
+
+const port = Number(process.env.PORT ?? 3000);
+
+console.log('registered routes:', Object.keys(routes));
+console.log('listening on http://localhost:' + port);`
+
+// appTSXContent is the mock content for src/App.tsx.
+const appTSXContent = `import { useState } from 'react';
+import { Sidebar } from './ui/Sidebar';
+import { Mascot } from './ui/Mascot';
+
+export function App() {
+  const [file, setFile] = useState('auth.ts');
+  return (
+    <div className="app">
+      <Sidebar items={['auth.ts', 'routes.ts', 'middleware.ts']} onSelect={setFile} />
+      <main>
+        <Mascot mood="working" />
+        <p>editing {file}</p>
+      </main>
+    </div>
+  );
+}`
+
+// authTestContent is the mock content for tests/auth.test.ts.
+const authTestContent = `import { describe, it, expect } from 'vitest';
+import { authenticate } from '../src/api/auth';
+
+describe('authenticate', () => {
+  it('rejects a missing token', async () => {
+    const res = await authenticate('');
+    expect(res).toEqual({ ok: false, reason: 'missing' });
+  });
+
+  it('accepts a valid token', async () => {
+    const res = await authenticate('valid.jwt.token');
+    expect(res.ok).toBe(true);
+  });
+});`
+
+// routesTestContent is the mock content for tests/routes.test.ts.
+const routesTestContent = `import { describe, it, expect } from 'vitest';
+import { routes } from '../src/api/routes';
+
+describe('routes', () => {
+  it('exposes a health check', async () => {
+    const res = await routes['GET /health']();
+    expect(res).toEqual({ ok: true });
+  });
+
+  it('registers login + refresh', () => {
+    expect(Object.keys(routes)).toContain('POST /login');
+    expect(Object.keys(routes)).toContain('POST /refresh');
+  });
+});`
+
+// packageJSONContent is the mock content for package.json.
+const packageJSONContent = `{
+  "name": "claude-companion",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.5"
+  }
+}`
+
+// tsconfigJSONContent is the mock content for tsconfig.json.
+const tsconfigJSONContent = `{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "tests"]
+}`
+
+// gitignoreContent is the mock content for .gitignore.
+const gitignoreContent = `node_modules/
+dist/
+coverage/
+*.log
+.env
+.DS_Store`
+
+// viteConfigContent is the mock content for vite.config.ts.
+const viteConfigContent = `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: { port: 3000 },
+  build: { outDir: 'dist', sourcemap: true },
+});`
 
 // MockFileContent returns the mock content for a given file path.
 // Exported for use by the viewport loader in model.go.

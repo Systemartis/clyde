@@ -179,6 +179,63 @@ func TestWindowSizeUpdatesBreakpoint(t *testing.T) {
 	}
 }
 
+// TestWindowSizePreservesPersistedHeights verifies that a WindowSizeMsg
+// does not reset a user-persisted panel height back to the computed default.
+// Regression guard: previously handleWindowSize unconditionally called
+// SetExpandedHeight(default) on every panel, which clobbered the height
+// seeded by newBaseModel from PanelConfig.Height when RememberLayout was on.
+func TestWindowSizePreservesPersistedHeights(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.RememberLayout = true
+	cfg.Panels.Usage.Height = 19 // persisted manual override
+
+	m := NewModelWithConfig(cfg, "")
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 160, Height: 50})
+	m = next.(Model)
+
+	if got := m.collapse[PanelUsage].expandedH; got != 19 {
+		t.Errorf("usage panel expanded height after WindowSizeMsg = %v, want 19", got)
+	}
+	if got := m.panelHeights[PanelUsage]; got != 19 {
+		t.Errorf("panelHeights[PanelUsage] = %d, want 19", got)
+	}
+}
+
+// TestWindowSizeFallsBackToDefaultWhenNoOverride verifies the non-persisted
+// path: when panelHeights[pid] is unset, handleWindowSize uses the computed
+// default expanded height instead.
+func TestWindowSizeFallsBackToDefaultWhenNoOverride(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.RememberLayout = false // no persisted overrides
+
+	m := NewModelWithConfig(cfg, "")
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 160, Height: 50})
+	m = next.(Model)
+
+	// PanelUsage default expanded height is 14.0; the spring should match.
+	if got := m.collapse[PanelUsage].expandedH; got != 14 {
+		t.Errorf("usage panel expanded height with no override = %v, want 14", got)
+	}
+}
+
+// TestWindowSizeClampsOversizedPersistedHeight verifies that a persisted
+// height taller than the terminal's available rows is clamped at render
+// time so the layout still fits.
+func TestWindowSizeClampsOversizedPersistedHeight(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.RememberLayout = true
+	cfg.Panels.Usage.Height = 200 // absurdly tall — must clamp
+
+	m := NewModelWithConfig(cfg, "")
+	next, _ := m.Update(tea.WindowSizeMsg{Width: 160, Height: 30})
+	m = next.(Model)
+
+	maxH := float64(30 - 8)
+	if got := m.collapse[PanelUsage].expandedH; got > maxH {
+		t.Errorf("usage panel expanded height = %v, want <= %v (terminal cap)", got, maxH)
+	}
+}
+
 // TestFrameMsgAdvancesTick verifies that FrameMsg advances the animation tick.
 func TestFrameMsgAdvancesTick(t *testing.T) {
 	m := NewModel()
@@ -912,12 +969,16 @@ func TestStatusBarHasCommandsHint(t *testing.T) {
 	t.Parallel()
 	m := NewModel()
 
-	plain := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, false))
+	// The version is now injected (single source of truth from
+	// internal/version). Pass a distinctive string and assert it appears —
+	// proving the footer renders the injected version, not a hardcode.
+	const injectedVer = "v9.9.9-test"
+	plain := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, false, injectedVer))
 	if !strings.Contains(plain, "commands") {
 		t.Errorf("status bar must include the `h commands` hint; got:\n%s", plain)
 	}
-	if !strings.Contains(plain, "v0.6") {
-		t.Errorf("status bar must include the version on the right; got:\n%s", plain)
+	if !strings.Contains(plain, injectedVer) {
+		t.Errorf("status bar must render the injected version %q on the right; got:\n%s", injectedVer, plain)
 	}
 	// The old per-panel hints (mode/explorer/calls/diff) MUST be gone —
 	// they moved into the panel-help overlay.

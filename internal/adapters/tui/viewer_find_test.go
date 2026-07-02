@@ -33,6 +33,21 @@ func TestFindInBuffer_OverlappingAndEmpty(t *testing.T) {
 	}
 }
 
+func TestFindInBuffer_RuneOffsetsOnMultibyte(t *testing.T) {
+	t.Parallel()
+	// "// café: foobar" — the "é" is 2 bytes but a single rune. A byte-offset
+	// implementation reports the match one cell too far right; the renderer
+	// treats Col/End as rune indices, so they must be rune offsets.
+	matches := findInBuffer("// café: foobar", "foo")
+	if len(matches) != 1 {
+		t.Fatalf("got %d matches, want 1", len(matches))
+	}
+	// Runes before "foo": "// café: " == 9 runes (byte offset would be 10).
+	if matches[0].Col != 9 || matches[0].End != 12 {
+		t.Errorf("match = %+v, want Col=9 End=12 (rune indices)", matches[0])
+	}
+}
+
 func TestFind_PromptAndNavigation(t *testing.T) {
 	t.Parallel()
 	m, _ := editTestModel(t, "alpha\nbeta gamma alpha\ndelta\n")

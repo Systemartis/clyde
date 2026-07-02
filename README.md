@@ -1,4 +1,10 @@
+<div align="center">
+
 # Clyde
+
+**Claude's best friend.**
+
+A terminal companion for [Claude Code](https://claude.com/claude-code). Tile it next to your `claude` pane and watch sessions, agents, tokens, diffs, and project state — live, without leaving the terminal.
 
 [![CI](https://github.com/Systemartis/clyde/actions/workflows/ci.yml/badge.svg)](https://github.com/Systemartis/clyde/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Systemartis/clyde/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Systemartis/clyde)
@@ -6,21 +12,56 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/Systemartis/clyde.svg)](https://pkg.go.dev/github.com/Systemartis/clyde)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> Claude's best friend.
+<img src="demo/hero.gif" alt="clyde dashboard — boot splash into the live panel grid" width="900">
 
-A terminal companion for Claude Code. Tile it next to your `claude` pane in tmux/cmux/Ghostty and see live sessions, tool activity, token usage, todos, subagents, and project state — all without leaving the terminal.
+</div>
 
-<p align="center">
-  <img src="assets/demo.gif" width="800" alt="clyde dashboard: live activity, usage and plan limits, file explorer, MCP servers">
-  <br>
-  <em>clyde --demo — the 3-column dashboard, help overlay, and active-mode scrolling. Recorded with <a href="https://github.com/charmbracelet/vhs">VHS</a> from <a href="assets/tapes/demo.tape">this tape</a>.</em>
-</p>
+---
 
-## Status
+Claude Code writes everything it does to local JSONL files. Clyde reads them — plus your git tree and `~/.claude` config — and turns them into a live dashboard: which agents are running, what tools they're calling, how much of your plan quota is burning, what changed on disk. Zero configuration, one binary, per-project scope.
 
-**V1 shipped.** Full multi-panel TUI: now panel (current tool + mascot), calls panel (agent hierarchy), usage panel (tokens + cost), diff panel (git hunks), explorer panel (filesystem tree), servers panel (MCPs + LSPs), notification banner (hook permission requests). Three layout modes: stack, tabs, multi-col. Tokyo Night theme, configurable via `~/.config/clyde/config.toml`.
+```sh
+cd your-project     # anywhere you run claude
+clyde               # tile it in a side pane (tmux / Zellij / Ghostty / iTerm split)
+```
 
-Built spec-first using **SDD** (Spec-Driven Development), **DDD**, and **Hexagonal Architecture**. Tests come before code. Architectural layering is enforced at lint-time via golangci-lint depguard rules.
+No Claude Code session yet in that directory? Run `clyde --demo` for a deterministic tour on mock data.
+
+## What you get
+
+### 👀 Observability — see what claude is doing, as it does it
+
+<img src="demo/observability.gif" alt="activity panel with subagent tool calls, usage quotas, bash ledger, cache stats" width="900">
+
+- **now** — current operation + an animated mascot that reacts to session state
+- **activity** — the agent tree: main session and every subagent, with per-tool calls, durations, and live status
+- **usage** — context-window fill, **real plan-quota percentages** for the 5h and weekly windows (same numbers as claude.ai/settings/usage), reset countdowns, burn rate
+- **bash** — a ledger of every shell command claude ran, with duration and failures flagged
+- **cache** — prompt-cache hit ratio and trend, so you know why a turn was slow or expensive
+- **permission requests** — wire up the [hook](#hook-notifications) and approve/deny claude's tool calls from clyde with `y`/`n`
+- **session tabs** — multiple claude sessions in one cwd get a tab strip (`[` / `]` to cycle, `Σ` for the aggregate view)
+
+### 🗂 Workspace — stay oriented while claude edits
+
+<img src="demo/workspace.gif" alt="explorer fuzzy search into the syntax-highlighted viewer and editor" width="900">
+
+- **explorer** — file tree with session-modified files highlighted and diffstats, plus fuzzy search (`/`)
+- **viewer** — syntax-highlighted file viewer with vim navigation (`j/k`, `gg/G`, `/` + `n/N` find), fullscreen mode (`f`)
+- **editor** — press `i` and it's a real editor: selections, clipboard, undo/redo, `:w` / `:q!`, `⌃s` to save
+- **diff** — accumulated git hunks for the session (enable it in settings)
+- **servers** — the MCP servers and LSPs claude has available, with live status
+
+### 🎨 Customization — make it yours
+
+<img src="demo/customization.gif" alt="settings overlay cycling themes live" width="900">
+
+- **7 themes**, cycled live from the settings overlay: Tokyo Night, Catppuccin, Dracula, Gruvbox, Nord, Rosé Pine, Kanagawa
+- **mascot personas** (`meowl`, `bowl`, or `off` — we don't judge)
+- **3 layouts**: stack (responsive 1–2 columns), tabs, multi-col (3 columns, ≥160-col terminals) — cycle with `⌃l`
+- per-panel toggles, sizes, and collapse defaults — remembered **per project** across restarts
+- notification style (fullscreen / banner / off) and a cost-alert threshold
+
+The GIFs above are generated from [`demo/*.tape`](demo/README.md) with [VHS](https://github.com/charmbracelet/vhs) against `clyde --demo` — fully reproducible.
 
 ## Install
 
@@ -30,16 +71,16 @@ Built spec-first using **SDD** (Spec-Driven Development), **DDD**, and **Hexagon
 curl -fsSL https://raw.githubusercontent.com/Systemartis/clyde/main/install.sh | sh
 ```
 
-Detects your OS + arch, fetches the matching archive, verifies the cosign keyless signature (if `cosign` is on `$PATH`), checks the sha256 against `checksums.txt`, and drops the binary into `$HOME/.local/bin`. Override with `INSTALL_DIR=...` or pin a specific tag with `VERSION=v0.1.0` (see comments at the top of [`install.sh`](install.sh)).
+Detects your OS + arch, fetches the matching archive, verifies the cosign keyless signature (if `cosign` is on `$PATH`), checks the sha256 against `checksums.txt`, and drops the binary into `$HOME/.local/bin`. Override with `INSTALL_DIR=...` or pin a specific tag with `VERSION=v1.0.0-rc.2` (see comments at the top of [`install.sh`](install.sh)).
 
-If you don't have `cosign` installed yet, you'll get a warning that the install proceeded with sha256 verification only. For full supply-chain verification install cosign first (`brew install cosign` / [other paths](https://github.com/sigstore/cosign#installation)) and re-run.
+If you don't have `cosign` installed yet, you'll get a warning that the install proceeded with sha256 verification only. For full supply-chain verification install cosign first (`brew install cosign`) — see [SUPPLY_CHAIN.md](SUPPLY_CHAIN.md).
 
 ### Pre-built binaries (manual)
 
 Each release ships a `tar.gz` for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` plus a `checksums.txt`, an SPDX SBOM per archive, and a cosign signature. See [SUPPLY_CHAIN.md](SUPPLY_CHAIN.md) for the full verify recipe.
 
 ```sh
-VERSION=0.1.0
+VERSION=1.0.0-rc.2
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 curl -fsSL "https://github.com/Systemartis/clyde/releases/download/v${VERSION}/clyde_${VERSION}_${OS}_${ARCH}.tar.gz" \
@@ -56,17 +97,11 @@ Requires Go 1.26+:
 go install github.com/Systemartis/clyde/cmd/clyde@latest
 ```
 
-The binary lands at `$(go env GOPATH)/bin/clyde` (typically `~/go/bin/clyde`). If `~/go/bin` is on your `$PATH`, you're done. Otherwise:
+The binary lands at `$(go env GOPATH)/bin/clyde` (typically `~/go/bin/clyde`). Add that to `$PATH` or symlink it somewhere already on it:
 
 ```sh
-# Option 1 — add ~/go/bin to PATH permanently (zsh)
-echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc
-
-# Option 2 — symlink into a directory already in your PATH
 ln -sf "$(go env GOPATH)/bin/clyde" ~/.local/bin/clyde
 ```
-
-Verify with `which clyde && clyde --version`.
 
 ### Windows
 
@@ -83,18 +118,16 @@ clyde --demo                    # try it in 10 seconds: deterministic mock data,
 | Flag | Default | What it does |
 |------|---------|--------------|
 | `--demo` | off | Run against deterministic mock data — no live reads, no hook server. Good for a first look and for reproducing UI bugs. |
-| `--layout` | from config | Override the layout mode for this run: `stack`, `tabs`, or `multi-col`. |
+| `--layout` | from config | Override the layout mode for this run: `stack`, `tabs`, or `multi-col` (3 columns; needs a ≥160-col terminal, otherwise falls back to tabs). |
 | `--source` | `claude` | LLM source adapter. Only `claude` ships today; `gemini`/`codex`/`kimi` are planned. |
 | `--version` | — | Print the version and exit. |
 | `--crash-report` | — | Bundle the log, version, and environment into a tarball at `~/clyde-crash-<timestamp>.tar.gz` for bug reports, then exit. |
 
-Clyde reads real Claude Code session data from `~/.claude/projects/<encoded-cwd>/*.jsonl`. It detects sessions for the current working directory; the encoding follows Claude Code's scheme (any non-alphanumeric character → `-`).
-
-If clyde shows no sessions: confirm you have run `claude` in this directory at least once (which creates the corresponding `~/.claude/projects/<encoded-cwd>/` directory). Per-project scope means clyde is intentionally local to the cwd it's launched from.
+Clyde reads real Claude Code session data from `~/.claude/projects/<encoded-cwd>/*.jsonl`. It detects sessions for the current working directory; per-project scope means clyde is intentionally local to the cwd it's launched from. If clyde shows no sessions, confirm you have run `claude` in this directory at least once.
 
 ### Plan usage & credentials
 
-On a Pro/Max subscription, the usage panel shows the **same 5-hour and weekly percentages as claude.ai/settings/usage**. To do that, clyde reads the OAuth token Claude Code already stored locally (the macOS Keychain, or Claude Code's credentials file on Linux) and calls the same usage endpoint Claude Code uses. Clyde never writes or modifies credentials.
+On a Pro/Max subscription, the usage panel shows the **same 5-hour and weekly percentages as claude.ai/settings/usage**. To do that, clyde reads the OAuth token Claude Code already stored locally (the macOS Keychain, or Claude Code's credentials file on Linux) and calls the same usage endpoint Claude Code uses. Keychain credentials are treated as strictly read-only — clyde never writes, refreshes, or rotates them.
 
 - On macOS the first live run may show a **Keychain access prompt** — that's clyde reading Claude Code's existing token. Click "Deny" and clyde still works: the plan bars fall back to a time-elapsed approximation derived from your local session files, marked `(plan offline)`.
 - API-key users (no subscription) see a `$` cost figure instead of plan bars — per-token cost is the meaningful number there.
@@ -102,6 +135,37 @@ On a Pro/Max subscription, the usage panel shows the **same 5-hour and weekly pe
 ### Diagnostics
 
 Clyde logs JSON records to `~/.cache/clyde/clyde.log` (or `$XDG_CACHE_HOME/clyde/clyde.log`). Set `CLYDE_DEBUG=1` to raise the level to debug. When reporting a bug, attach the tarball produced by `clyde --crash-report` — it contains the log, version, and environment, and nothing else.
+
+## Keybindings
+
+The footer always shows `h` — press it for a per-panel cheat-sheet. The essentials:
+
+| Key | Action |
+|-----|--------|
+| `Tab` / `Shift+Tab` | next / previous panel |
+| `↑` `↓` `←` `→` | move focus (column-aware); scroll in active mode |
+| `Enter` | expand panel → enter **active mode** (interact with its content, pink border) |
+| `Backspace` | leave active mode / collapse |
+| `Space` | collapse ⇄ expand (stack layout) |
+| `e` `a` `d` `u` `s` `b` `c` | jump to explorer · activity · diff · usage · servers · bash · cache |
+| `Ctrl+E` / `Ctrl+A` / `Ctrl+D` | the same jumps, chorded |
+| `[` / `]` | previous / next session tab |
+| `+` / `-` | resize the active panel (stack layout) |
+| `Ctrl+L` | cycle layout mode (stack → tabs → multi-col) |
+| `Ctrl+0` | collapse every panel except the focused one |
+| `h` | per-panel command cheat-sheet |
+| `?` | settings overlay |
+| `y` / `n` / `Esc` | allow / deny / dismiss a pending permission request |
+| `Ctrl+N` | preview the notification overlay (once per run) |
+| `q` / `Ctrl+C` | quit |
+
+**Explorer (active mode):** `↑↓` move the cursor across the modified-files and tree sections, `←→` jump between sections, `Enter` opens a file or toggles a directory, `/` fuzzy-searches the cwd, `gg`/`G` and `⌃d ⌃u ⌃f ⌃b` do what vim taught you, `y`/`Y` copy the full path / basename.
+
+**Viewer:** `j/k` or arrows scroll, `gg`/`G` jump, `/` finds (`n`/`N` between matches), `f` toggles fullscreen, `i` enters the editor, `:` opens command mode (`:w` `:q` `:wq` `:q!`), `⌃s`/`⌘s` saves, `Esc` closes (asks before discarding unsaved edits).
+
+**Editor:** type normally; `Shift`+arrows select, `⌘c`/`⌃c` copy, `⌘a` select-all, `⌘z`/`⌃z` undo, `⌘⇧z`/`⌃y` redo, `⌥`/`⌃`+arrows jump words, `Home`/`End` line edges.
+
+The mouse works too: click to focus, double-click for active mode, wheel to scroll the panel under the cursor, click a panel's top border to collapse it.
 
 ## Hook notifications
 
@@ -167,7 +231,7 @@ enabled = false
 enabled = false
 
 auto_switch_to_all_on_new_session = true   # jump to the Σ tab when a new session appears
-remember_layout = false           # persist collapse/resize changes across runs
+remember_layout = false           # persist collapse/resize changes across runs (per project)
 notification_style = "fullscreen" # fullscreen | banner | off
 notify_cost_threshold_usd = 20.0  # 0 disables cost alerts (plan-quota alerts still fire)
 theme = "tokyo-night"             # tokyo-night | catppuccin | dracula | gruvbox | nord | rose-pine | kanagawa
@@ -180,24 +244,9 @@ diff = true
 bash = true
 ```
 
-### Keybindings
+## Privacy & trust model
 
-| Key | Action |
-|-----|--------|
-| `Tab` / `Shift+Tab` | Cycle panel focus |
-| `↑` / `↓` | Navigate panels (scroll, in active mode) |
-| `Enter` | Enter active mode on the focused panel (scrollable, pink border) |
-| `Esc` | Leave active mode / dismiss overlays |
-| `Space` | Collapse focused panel |
-| `+` / `-` | Resize panel (active mode) |
-| `Ctrl+L` | Cycle layout mode (stack → tabs → multi-col) |
-| `Ctrl+E` / `Ctrl+A` / `Ctrl+D` | Jump to explorer / activity / diff |
-| `Ctrl+0` | Collapse every panel except the focused one |
-| `h` | Per-panel help overlay |
-| `?` | Settings overlay |
-| `q` / `Ctrl+C` | Quit |
-
-The mouse works too: click to focus, double-click for active mode, wheel to scroll the panel under the cursor, click a panel's top border to collapse it.
+Clyde is a **local observer**. It reads files Claude Code already writes on your machine (`~/.claude/projects`, `~/.claude/todos`, `~/.claude/settings.json`), your project's `.git`, and — only for the plan-usage percentages — calls Anthropic's usage endpoint with the credentials Claude Code already stored. No telemetry, no analytics, no network calls beyond that one optional endpoint. Logs stay in `~/.cache/clyde/`. See [SECURITY.md](SECURITY.md) for the full trust model and disclosure process.
 
 ## Stack
 
@@ -210,12 +259,15 @@ The mouse works too: click to focus, double-click for active mode, wheel to scro
 
 ```sh
 go test ./...                 # unit + integration tests
-go test -cover ./...          # with coverage
+go test -race ./...           # what CI runs
 go vet ./...                  # static checks
 gofmt -l .                    # formatting (no diff = clean)
 golangci-lint run ./...       # lint + hexagonal layer enforcement
 go build ./cmd/clyde          # local build
+go run ./cmd/clyde --demo
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the local-dev setup, the strict-TDD requirement, and the conventional-commits + branch-naming rules.
 
 ## Uninstall
 
@@ -230,10 +282,6 @@ If you added the hook snippet, also remove the clyde entry from `hooks.PreToolUs
 ## Security
 
 Found a vulnerability? Please **don't** open a public issue. See [SECURITY.md](SECURITY.md) for the disclosure process and trust model. Each tagged release ships SPDX SBOMs and a keyless cosign signature over `checksums.txt` — verify before running.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the local-dev setup, the strict-TDD requirement, and the conventional-commits + branch-naming rules.
 
 ## Governance
 
