@@ -20,6 +20,10 @@ Set TypingSpeed     80ms
 Hide
 Type "export XDG_CONFIG_HOME=$(mktemp -d) XDG_CACHE_HOME=$(mktemp -d); clear"
 Enter
+# The bash and cache panels ship disabled; enable them in the throwaway
+# config so the b/c jumps in this tour have something to land on.
+Type "mkdir -p $XDG_CONFIG_HOME/clyde && printf '[panels.bash]\nenabled = true\n[panels.cache]\nenabled = true\n' > $XDG_CONFIG_HOME/clyde/config.toml; clear"
+Enter
 Type "clyde --demo"
 Enter
 Sleep 4s
