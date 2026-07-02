@@ -228,9 +228,19 @@ type rawOAuth struct {
 	RateLimitTier string   `json:"rateLimitTier"`
 }
 
+// maxCredentialsBytes bounds the credentials blob before JSON decoding.
+// Real credentials files are a few hundred bytes; 1 MiB is generous
+// headroom. Without a bound, a corrupt multi-megabyte file (or a
+// mutation-grown fuzz input) reaches json.Unmarshal and can run long
+// enough to trip the fuzz engine's shutdown deadline on slow runners.
+const maxCredentialsBytes = 1 << 20
+
 // parseCredentialsJSON parses the JSON blob (shared file/Keychain shape).
 func parseCredentialsJSON(data []byte) (Credentials, error) {
-	data = []byte(strings.TrimSpace(string(data)))
+	if len(data) > maxCredentialsBytes {
+		return Credentials{}, fmt.Errorf("credentials blob too large: %d bytes (max %d)", len(data), maxCredentialsBytes)
+	}
+	data = bytes.TrimSpace(data)
 	if len(data) == 0 {
 		return Credentials{}, ErrCredentialsNotFound
 	}
