@@ -62,6 +62,7 @@ clean: ## Remove build artifacts
 	rm -rf ./clyde ./dist ./coverage.out
 
 demo-media: ## Re-record README media via VHS (brew install vhs)
-	vhs assets/tapes/demo.tape
-	vhs assets/tapes/screens.tape
-	rm -f assets/screens-scratch.gif
+	vhs demo/hero.tape
+	vhs demo/observability.tape
+	vhs demo/workspace.tape
+	vhs demo/customization.tape
