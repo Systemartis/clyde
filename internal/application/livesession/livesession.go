@@ -432,9 +432,10 @@ type sessionUsageCache struct {
 	entries map[session.ID]sessionUsageCacheEntry
 }
 
-// sessionUsageCacheEntry is the per-session memoised usage.Usage along
-// with the LastActivity stamp at fetch time. A change in LastActivity
-// invalidates the entry — the JSONL has new events.
+// sessionUsageCacheEntry is the per-session memoised usage.Usage (plus the
+// session's first-event time, used to anchor the window reset) along with the
+// LastActivity stamp at fetch time. A change in LastActivity invalidates the
+// entry — the JSONL has new events.
 type sessionUsageCacheEntry struct {
 	usage    usage.Usage
 	activity time.Time
@@ -586,7 +587,10 @@ func (l *LiveSession) SnapshotForSession(ctx context.Context, p project.Project,
 	base = l.applyLSPs(base)
 	base = l.applyBashLog(base)
 	base = l.applyCacheStats(base)
-	base = l.applyMultiWindowUsage(ctx, base, summaries, now)
+	// focusedStart anchors the usage-window reset on the focused session's first
+	// event (allEvts is sorted ascending above, so its earliest event is the
+	// session start).
+	base = l.applyMultiWindowUsage(ctx, base, summaries, now, earliestEventTime(allEvts))
 	base = l.applySessionStats(ctx, base, summaries)
 
 	// ── Phase E: active file (diff target) ───────────────────────────────────
@@ -806,11 +810,28 @@ const maxMultiWindowSessions = 50
 //
 // The focused session's events are already accumulated in base.TotalUsage; we
 // reuse that value to avoid double-reading its JSONL file.
-func (l *LiveSession) applyMultiWindowUsage(ctx context.Context, base View, summaries []session.Summary, now time.Time) View {
+func (l *LiveSession) applyMultiWindowUsage(ctx context.Context, base View, summaries []session.Summary, now time.Time, focusedStart time.Time) View {
 	if l.globalSrc != nil {
-		return l.applyMultiWindowUsageGlobal(ctx, base, summaries, now)
+		return l.applyMultiWindowUsageGlobal(ctx, base, summaries, now, focusedStart)
 	}
-	return l.applyMultiWindowUsageSingleProject(ctx, base, summaries, now)
+	return l.applyMultiWindowUsageSingleProject(ctx, base, summaries, now, focusedStart)
+}
+
+// earliestEventTime returns the minimum event timestamp, or the zero time when
+// evts is empty. Used to anchor the usage-window reset on a session's first
+// event rather than its last activity (file mtime).
+func earliestEventTime(evts []event.Event) time.Time {
+	var earliest time.Time
+	for i := range evts {
+		ts := evts[i].Timestamp
+		if ts.IsZero() {
+			continue
+		}
+		if earliest.IsZero() || ts.Before(earliest) {
+			earliest = ts
+		}
+	}
+	return earliest
 }
 
 // applyMultiWindowUsageGlobal aggregates usage across all projects using the
@@ -831,14 +852,18 @@ type windowAccumulator struct {
 }
 
 // add includes a session's usage if it falls within the window.
-// firstEvent may be zero when unknown (e.g. unreadable JSONL).
+// firstEvent may be zero when unknown (e.g. unreadable JSONL); the reset is
+// anchored on the earliest first-event across in-window sessions because
+// Anthropic anchors the 5h/7d window at the first message, not the last
+// activity (file mtime) — anchoring on mtime made the countdown slide
+// forward every tick for an active session and never decrease.
 func (w *windowAccumulator) add(u usage.Usage, lastActivity, firstEvent time.Time, age time.Duration) {
 	if age > w.windowSize {
 		return
 	}
 	w.total = w.total.Add(u)
 	w.count++
-	if w.earliest.IsZero() || lastActivity.Before(w.earliest) {
+	if !lastActivity.IsZero() && (w.earliest.IsZero() || lastActivity.Before(w.earliest)) {
 		w.earliest = lastActivity
 	}
 	if !firstEvent.IsZero() && (w.earliestStart.IsZero() || firstEvent.Before(w.earliestStart)) {
@@ -872,23 +897,22 @@ func nextResetAfter(anchor, now time.Time, window time.Duration) time.Time {
 	return reset
 }
 
-func (l *LiveSession) applyMultiWindowUsageGlobal(ctx context.Context, base View, summaries []session.Summary, now time.Time) View {
+func (l *LiveSession) applyMultiWindowUsageGlobal(ctx context.Context, base View, summaries []session.Summary, now time.Time, focusedStart time.Time) View {
 	w5h := windowAccumulator{windowSize: 5 * time.Hour}
 	wWeek := windowAccumulator{windowSize: 7 * 24 * time.Hour}
 
 	refs, err := l.globalSrc.AllProjectSessions(ctx, maxMultiWindowSessions)
 	if err != nil {
-		return l.applyMultiWindowUsageSingleProject(ctx, base, summaries, now)
+		return l.applyMultiWindowUsageSingleProject(ctx, base, summaries, now, focusedStart)
 	}
 
 	focusedID := string(base.FocusedID)
-	focusedFirst := firstEventTime(base.Events)
 	for _, ref := range refs {
 		age := now.Sub(ref.LastActivity)
 		if age > wWeek.windowSize {
 			break // refs sorted desc; remaining are all too old
 		}
-		u, first := l.usageForRef(ctx, ref, focusedID, base.TotalUsage, focusedFirst)
+		u, first := l.usageForRef(ctx, ref, focusedID, base.TotalUsage, focusedStart)
 		w5h.add(u, ref.LastActivity, first, age)
 		wWeek.add(u, ref.LastActivity, first, age)
 	}
@@ -949,34 +973,41 @@ func (l *LiveSession) usageForRef(ctx context.Context, ref ports.GlobalSessionRe
 
 // applyMultiWindowUsageSingleProject is the legacy fallback that aggregates
 // usage only within the current project's sessions.
-func (l *LiveSession) applyMultiWindowUsageSingleProject(ctx context.Context, base View, summaries []session.Summary, now time.Time) View {
+func (l *LiveSession) applyMultiWindowUsageSingleProject(ctx context.Context, base View, summaries []session.Summary, now time.Time, focusedStart time.Time) View {
 	w5h := windowAccumulator{windowSize: 5 * time.Hour}
 	wWeek := windowAccumulator{windowSize: 7 * 24 * time.Hour}
 
-	if len(summaries) > 0 {
-		age := now.Sub(summaries[0].LastActivity)
-		first := firstEventTime(base.Events)
-		w5h.add(base.TotalUsage, summaries[0].LastActivity, first, age)
-		wWeek.add(base.TotalUsage, summaries[0].LastActivity, first, age)
-	}
-
-	count := 0
-	for _, sum := range summaries[1:] {
-		if count >= maxMultiWindowSessions {
-			break
-		}
+	// summaries are sorted descending by LastActivity (see SnapshotForSession).
+	reads := 0
+	for _, sum := range summaries {
 		age := now.Sub(sum.LastActivity)
 		if age > wWeek.windowSize {
-			break
+			break // remaining summaries are all older than the widest window
 		}
-		evts, err := l.src.Events(ctx, sum.ID)
-		count++
-		if err != nil {
-			continue
+
+		var u usage.Usage
+		var start time.Time
+		if sum.ID == base.FocusedID {
+			// The focused session's usage is already accumulated in
+			// base.TotalUsage — reuse it (avoids a re-read). Match by IDENTITY,
+			// not position: focusing an OLDER tab must not double-count the
+			// focused session nor drop the most-recent one.
+			u = base.TotalUsage
+			start = focusedStart
+		} else {
+			if reads >= maxMultiWindowSessions {
+				continue
+			}
+			evts, err := l.src.Events(ctx, sum.ID)
+			reads++
+			if err != nil {
+				continue
+			}
+			u = sumUsageFromEvents(evts)
+			start = firstEventTime(evts)
 		}
-		u := sumUsageFromEvents(evts)
-		w5h.add(u, sum.LastActivity, firstEventTime(evts), age)
-		wWeek.add(u, sum.LastActivity, firstEventTime(evts), age)
+		w5h.add(u, sum.LastActivity, start, age)
+		wWeek.add(u, sum.LastActivity, start, age)
 	}
 
 	base.Usage5h = w5h.total
@@ -1565,19 +1596,21 @@ func (l *LiveSession) buildTimelines(ctx context.Context, p project.Project, foc
 			return agEvts[i].Timestamp.Before(agEvts[j].Timestamp)
 		})
 
-		// Filter visibility — use all events (not just visible) for tool call
-		// matching, since tool_result-only user events carry the matching IDs.
-		toolMatchEvts := agEvts
-
-		// Build filtered visible events for display.
-		visAgEvts := agEvts[:0]
-		for _, ev := range toolMatchEvts {
+		// Use ALL events (not just visible) for tool-call matching, since
+		// tool_result-only user events carry the matching IDs.
+		//
+		// Build the visible subset into a FRESH slice. Filtering in place with
+		// agEvts[:0] shares agEvts' backing array, so the compaction would
+		// overwrite the tool_result-only events that extractToolCalls needs —
+		// leaving completed calls stuck "active". Mirror the main-session path.
+		visAgEvts := make([]event.Event, 0, len(agEvts))
+		for _, ev := range agEvts {
 			if isVisible(ev) {
 				visAgEvts = append(visAgEvts, ev)
 			}
 		}
 
-		calls := extractToolCalls(toolMatchEvts)
+		calls := extractToolCalls(agEvts)
 		active := hasActiveCall(calls)
 
 		timelines = append(timelines, AgentTimeline{
