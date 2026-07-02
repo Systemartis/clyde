@@ -200,6 +200,13 @@ func (m Model) handleHookPendingKey(msg tea.KeyPressMsg) (bool, Model) {
 	switch msg.Code {
 	case 'y', 'Y':
 		m.respondHook(true, "")
+		// Dismiss the overlay unconditionally. In the live path respondHook
+		// already cleared hookNotif, but the SYNTHETIC preview (Ctrl+N) has no
+		// ResponseCh, so respondHook is a no-op there and hookNotif stays
+		// Active — without notifAck the overlay would be stuck until Esc.
+		// Setting notifAck here mirrors the 'n'/Esc branches so all three
+		// responses dismiss the banner in both the live and synthetic cases.
+		m.notifAck = true
 		return true, m
 	case 'n', 'N':
 		m.respondHook(false, "denied by user")
@@ -1309,9 +1316,16 @@ func (m Model) handleSettingsKey(msg tea.KeyPressMsg) Model {
 	switch msg.Code {
 	case tea.KeyEscape:
 		// Apply edits to baseCfg, recompute effective cfg, save to file.
-		// Layout mode + remember-layout + notification style + cost
-		// threshold all live globally — persist them all.
-		m.baseCfg.Layout.DefaultMode = m.layoutMode
+		// Remember-layout + notification style + cost threshold all live
+		// globally — persist them all.
+		//
+		// Layout mode is deliberately NOT persisted here from m.layoutMode:
+		// that field also carries transient runtime state (a --layout CLI
+		// override, or a width-driven fallback) that the user never asked to
+		// make permanent. Baking it in on every open+close would silently
+		// rewrite config.toml's default_mode. Instead the layout chip's Enter
+		// handler writes baseCfg.Layout.DefaultMode only when the user
+		// actually cycles the mode (see settingsLayoutCursor below).
 		m.baseCfg.RememberLayout = m.settingsRememberLayout
 		m.baseCfg.NotificationStyle = m.settingsNotificationStyle
 		m.baseCfg.NotifyCostThresholdUSD = m.settingsCostThreshold
@@ -1361,6 +1375,12 @@ func (m Model) handleSettingsKey(msg tea.KeyPressMsg) Model {
 			m.settingsRememberLayout = !m.settingsRememberLayout
 		case m.settingsCursor == settingsLayoutCursor:
 			m = m.cycleLayoutMode()
+			// The user explicitly changed the layout via the overlay, so this
+			// is a real preference — persist it into baseCfg now. Esc no
+			// longer copies m.layoutMode blindly (it can hold a transient CLI
+			// override), so this is the only place a user-driven layout choice
+			// reaches config.toml.
+			m.baseCfg.Layout.DefaultMode = m.layoutMode
 		case m.settingsCursor >= 0 && m.settingsCursor < len(m.settingsToggles):
 			m.settingsToggles[m.settingsCursor].Enabled = !m.settingsToggles[m.settingsCursor].Enabled
 		case m.settingsCursor >= len(m.settingsToggles) && m.settingsCursor <= startupCursorMax(m.settingsToggles):

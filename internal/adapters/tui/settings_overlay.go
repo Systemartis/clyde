@@ -685,12 +685,38 @@ func writeConfigFile(cfg Config) {
 	}
 	path := dir + "/config.toml"
 
+	// Read-merge-write to soften the concurrent-instance lost-update race.
+	// Two clyde processes that both loaded this file and then each changed a
+	// DIFFERENT setting must not clobber one another. We re-read the file
+	// immediately before writing and merge THIS process's edits over the
+	// current on-disk state (mergeConfigForWrite) instead of blindly
+	// overwriting with a possibly-stale in-memory copy.
+	//
+	// Remaining race window (honest disclosure — full serialization is out of
+	// scope, see the settings-persistence design notes):
+	//   - Two processes editing the SAME field is still last-writer-wins.
+	//   - Setting a field back to its DEFAULT value cannot override a
+	//     non-default value another process wrote concurrently: the merge
+	//     treats "value == DefaultConfig" as "this process did not touch it".
+	//     This is the classic tradeoff of a stateless three-way merge whose
+	//     common ancestor is DefaultConfig rather than a per-process baseline.
+	//   - The read and the rename are not atomic with respect to another
+	//     writer, so a write that lands between our read and our rename can
+	//     still be lost.
+	out := cfg
+	if data, rerr := os.ReadFile(path); rerr == nil { //nolint:gosec // same user-owned path as LoadConfig
+		onDisk := DefaultConfig()
+		if _, derr := toml.Decode(string(data), &onDisk); derr == nil {
+			out = mergeConfigForWrite(onDisk, cfg)
+		}
+	}
+
 	// Encode to a buffer first so a marshal error doesn't leave a
 	// half-written file on disk. Then atomic-replace via tmp + rename
 	// so a process crash mid-write can't corrupt the user's config.
 	// 0o600 — config has no secrets but no reason for world-readable.
 	var buf bytes.Buffer
-	if err := toml.NewEncoder(&buf).Encode(cfg); err != nil {
+	if err := toml.NewEncoder(&buf).Encode(out); err != nil {
 		return
 	}
 	tmp := path + ".tmp"
@@ -700,5 +726,88 @@ func writeConfigFile(cfg Config) {
 	if err := os.Rename(tmp, path); err != nil {
 		_ = os.Remove(tmp)
 		return
+	}
+}
+
+// mergeConfigForWrite performs a stateless three-way merge with DefaultConfig
+// as the common ancestor: for each field, if the in-memory cfg still equals
+// the built-in default we assume this process did not change it and keep the
+// on-disk value (which a concurrent instance may have written); otherwise the
+// in-memory value wins. Per-project overrides are unioned so a sibling
+// instance working in a different project keeps its entry.
+//
+// See writeConfigFile for the documented limitations of this heuristic.
+func mergeConfigForWrite(onDisk, cfg Config) Config {
+	def := DefaultConfig()
+	out := onDisk
+
+	if cfg.Layout.DefaultMode != def.Layout.DefaultMode {
+		out.Layout.DefaultMode = cfg.Layout.DefaultMode
+	}
+	if cfg.Layout.AutoSwitchThreshold != def.Layout.AutoSwitchThreshold {
+		out.Layout.AutoSwitchThreshold = cfg.Layout.AutoSwitchThreshold
+	}
+	if cfg.Layout.CycleHotkey != def.Layout.CycleHotkey {
+		out.Layout.CycleHotkey = cfg.Layout.CycleHotkey
+	}
+	if cfg.AutoSwitchToAllOnNewSession != def.AutoSwitchToAllOnNewSession {
+		out.AutoSwitchToAllOnNewSession = cfg.AutoSwitchToAllOnNewSession
+	}
+	if cfg.RememberLayout != def.RememberLayout {
+		out.RememberLayout = cfg.RememberLayout
+	}
+	if cfg.NotificationStyle != def.NotificationStyle {
+		out.NotificationStyle = cfg.NotificationStyle
+	}
+	if cfg.NotifyCostThresholdUSD != def.NotifyCostThresholdUSD {
+		out.NotifyCostThresholdUSD = cfg.NotifyCostThresholdUSD
+	}
+	if cfg.Theme != def.Theme {
+		out.Theme = cfg.Theme
+	}
+	if cfg.MascotPersona != def.MascotPersona {
+		out.MascotPersona = cfg.MascotPersona
+	}
+	if cfg.BootScreenEnabled != def.BootScreenEnabled {
+		out.BootScreenEnabled = cfg.BootScreenEnabled
+	}
+
+	out.Panels = mergePanelsForWrite(onDisk.Panels, cfg.Panels, def.Panels)
+
+	// Per-project overrides: union. Keys this process carries win; on-disk-only
+	// keys (sibling projects) are preserved. A concurrent edit to the SAME
+	// project key, or a reset that removes this process's own key, still falls
+	// under the last-writer-wins window documented on writeConfigFile.
+	if len(cfg.Projects) > 0 {
+		if out.Projects == nil {
+			out.Projects = make(map[string]ProjectOverride, len(cfg.Projects))
+		}
+		for k, v := range cfg.Projects {
+			out.Projects[k] = v
+		}
+	}
+	return out
+}
+
+// mergePanelsForWrite applies the per-panel three-way merge (DefaultConfig as
+// ancestor). PanelConfig is comparable, so a whole-struct compare cleanly
+// answers "did this process touch this panel?".
+func mergePanelsForWrite(onDisk, cfg, def PanelsConfig) PanelsConfig {
+	out := onDisk
+	mergePanelForWrite(&out.Now, cfg.Now, def.Now)
+	mergePanelForWrite(&out.Calls, cfg.Calls, def.Calls)
+	mergePanelForWrite(&out.Tasks, cfg.Tasks, def.Tasks)
+	mergePanelForWrite(&out.Diff, cfg.Diff, def.Diff)
+	mergePanelForWrite(&out.Usage, cfg.Usage, def.Usage)
+	mergePanelForWrite(&out.Explorer, cfg.Explorer, def.Explorer)
+	mergePanelForWrite(&out.Servers, cfg.Servers, def.Servers)
+	mergePanelForWrite(&out.Bash, cfg.Bash, def.Bash)
+	mergePanelForWrite(&out.Cache, cfg.Cache, def.Cache)
+	return out
+}
+
+func mergePanelForWrite(dst *PanelConfig, cfg, def PanelConfig) {
+	if cfg != def {
+		*dst = cfg
 	}
 }

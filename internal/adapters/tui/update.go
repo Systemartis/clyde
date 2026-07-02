@@ -493,6 +493,17 @@ func (m Model) handleHookEvent(msg hookEventMsg) (tea.Model, tea.Cmd) {
 
 	keyArg := extractKeyArg(evt.Tool, evt.Args)
 
+	// A prior hook request may still be pending (the user hadn't answered yet)
+	// when a newer event arrives. Overwriting hookPendingCh without replying
+	// would orphan that request's ResponseCh — the blocked HTTP handler would
+	// hang until its write-timeout (~5 min of a wedged claude CLI). Auto-deny
+	// the superseded request so its channel is always answered exactly once.
+	// The channel is buffered (cap 1) and, by invariant, never written while
+	// non-nil, so this send cannot block.
+	if m.hookPendingCh != nil {
+		m.hookPendingCh <- hookserver.HookResponse{Allow: false, Reason: "superseded by newer request"}
+	}
+
 	m.hookNotif = HookNotification{
 		Active: true,
 		Tool:   evt.Tool,

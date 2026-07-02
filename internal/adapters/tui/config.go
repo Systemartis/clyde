@@ -18,6 +18,18 @@ const (
 	LayoutMultiCol LayoutMode = "multi-col"
 )
 
+// IsValid reports whether m is a recognized LayoutMode. Used when loading
+// config to fall back to the default if an unknown string slipped in via a
+// hand-edited TOML file (consistent with Theme / NotificationStyle /
+// MascotPersona validation).
+func (m LayoutMode) IsValid() bool {
+	switch m {
+	case LayoutStack, LayoutTabs, LayoutMultiCol:
+		return true
+	}
+	return false
+}
+
 // NotificationStyle picks the visual treatment for hook prompts and the
 // compaction-imminent warning.
 type NotificationStyle string
@@ -174,7 +186,7 @@ type LayoutConfig struct {
 type PanelsConfig struct {
 	Now      PanelConfig `toml:"now"`
 	Calls    PanelConfig `toml:"calls"` // v13: replaces tasks
-	Tasks    PanelConfig `toml:"tasks"` // kept for backward compat — maps to calls slot
+	Tasks    PanelConfig `toml:"tasks"` // legacy alias — copied onto Calls in LoadConfig when [panels.calls] is absent
 	Diff     PanelConfig `toml:"diff"`
 	Usage    PanelConfig `toml:"usage"`
 	Explorer PanelConfig `toml:"explorer"`
@@ -252,9 +264,11 @@ type Config struct {
 	Theme Theme `toml:"theme"`
 
 	// MascotPersona picks which character drives the now-panel mascot. The
-	// default ("kitten") is the cat shipped in v23+; "bunny" reverts to
-	// the v9–v22 rabbit; "off" hides the mascot block entirely for users
-	// who'd rather see the now panel as a flat status line.
+	// default ("meowl") is the cat shipped in v23+; "bowl" reverts to the
+	// v9–v22 rabbit; "off" hides the mascot block entirely for users who'd
+	// rather see the now panel as a flat status line. The legacy "kitten" /
+	// "bunny" values are still accepted on read and normalized to
+	// "meowl" / "bowl" (see MascotPersona.Normalize).
 	MascotPersona MascotPersona `toml:"mascot_persona"`
 
 	// BootScreenEnabled toggles the animated splash screen shown for
@@ -343,8 +357,20 @@ func LoadConfig() Config {
 		return cfg
 	}
 	// Merge on top of defaults — TOML only overwrites keys that are present.
-	if _, err := toml.Decode(string(data), &cfg); err != nil {
+	md, err := toml.Decode(string(data), &cfg)
+	if err != nil {
 		return cfg
+	}
+	// Legacy [panels.tasks] → calls: v13 renamed the panel, but hand-written
+	// configs from before the rename only carry [panels.tasks]. Honor it by
+	// copying onto the calls slot when the user did NOT also set the modern
+	// [panels.calls] (which always wins). Files that clyde itself wrote carry
+	// both sections, so this only fires for genuine legacy input.
+	if md.IsDefined("panels", "tasks") && !md.IsDefined("panels", "calls") {
+		cfg.Panels.Calls = cfg.Panels.Tasks
+	}
+	if !cfg.Layout.DefaultMode.IsValid() {
+		cfg.Layout.DefaultMode = LayoutStack
 	}
 	if !cfg.NotificationStyle.IsValid() {
 		cfg.NotificationStyle = NotificationFullscreen
