@@ -675,11 +675,10 @@ func saveSettingsToConfig(base Config, toggles []SettingsPanelToggle, scope Sett
 }
 
 func writeConfigFile(cfg Config) {
-	home, err := os.UserHomeDir()
-	if err != nil {
+	dir := configDir()
+	if dir == "" {
 		return
 	}
-	dir := home + "/.config/clyde"
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return
 	}

@@ -341,18 +341,34 @@ func formatCostThreshold(v float64) string {
 	return fmt.Sprintf("$%.2f", v)
 }
 
-// LoadConfig reads the TOML config at ~/.config/clyde/config.toml and
-// merges it over the defaults. If the file doesn't exist, defaults are returned.
-func LoadConfig() Config {
-	cfg := DefaultConfig()
+// configDir resolves the clyde config directory following the XDG
+// base-directory spec: $XDG_CONFIG_HOME/clyde when the variable is set,
+// ~/.config/clyde otherwise. The cache paths (hook-url, logs) already honor
+// XDG_CACHE_HOME — the config must not behave differently, or sandboxed runs
+// (tests, VHS recordings) silently read and write the user's real config.
+// Returns "" when no home directory can be determined.
+func configDir() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return xdg + "/clyde"
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
+		return ""
+	}
+	return home + "/.config/clyde"
+}
+
+// LoadConfig reads the TOML config at configDir()/config.toml and merges it
+// over the defaults. If the file doesn't exist, defaults are returned.
+func LoadConfig() Config {
+	cfg := DefaultConfig()
+	dir := configDir()
+	if dir == "" {
 		return cfg
 	}
-	path := home + "/.config/clyde/config.toml"
-	// G304: path is built from the current user's home directory + a hard-
-	// coded suffix. The user's own config file is what we're trying to load.
-	data, err := os.ReadFile(path) //nolint:gosec // see comment
+	// G304: path is the user's own XDG-resolved config location. The user's
+	// own config file is what we're trying to load.
+	data, err := os.ReadFile(dir + "/config.toml") //nolint:gosec // see comment
 	if err != nil {
 		return cfg
 	}
