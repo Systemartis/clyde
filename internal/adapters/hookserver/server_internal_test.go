@@ -1,10 +1,48 @@
 package hookserver
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 )
+
+// TestNew_RoutesErrorLogToSlog is the regression for the finding that
+// http.Server.ErrorLog was nil, so server-level errors (accept failures,
+// handler panics) printed to stderr and corrupted the Bubble Tea alt-screen.
+// The server must install an ErrorLog that routes into slog.Default at Error
+// level instead of writing to stderr.
+//
+// NOT parallel: it swaps the global slog default.
+func TestNew_RoutesErrorLogToSlog(t *testing.T) {
+	var buf bytes.Buffer
+	orig := slog.Default()
+	t.Cleanup(func() { slog.SetDefault(orig) })
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelError})))
+
+	s, err := New()
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() { _ = s.listener.Close() })
+
+	if s.srv.ErrorLog == nil {
+		t.Fatal("http.Server.ErrorLog is nil — server errors will corrupt the TUI alt-screen")
+	}
+
+	// Simulate what http.Server does internally on an error.
+	s.srv.ErrorLog.Print("simulated accept error")
+
+	out := buf.String()
+	if !strings.Contains(out, "simulated accept error") {
+		t.Fatalf("ErrorLog output did not reach the slog handler; buf=%q", out)
+	}
+	if !strings.Contains(out, `"level":"ERROR"`) {
+		t.Fatalf("ErrorLog did not route at ERROR level; buf=%q", out)
+	}
+}
 
 // TestServer_StartReturnsServeError closes the underlying listener before
 // Start observes ctx cancellation. Serve must return a non-ErrServerClosed
