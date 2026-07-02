@@ -9,6 +9,7 @@ name: scorecard
 # public, no further config needed.
 
 on:
+  workflow_dispatch:
   branch_protection_rule:
   schedule:
     # Weekly drift scan, Tuesday 06:11 UTC. Scorecard's "Branch-Protection"
