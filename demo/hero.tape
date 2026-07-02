@@ -1,9 +1,10 @@
 # Hero GIF — top of README.
 #
-# Boot splash → settled dashboard. The splash auto-plays (~2s) and the
-# dashboard holds long enough for the mascot to animate and the reader to
-# take in the panel grid. No keys pressed — the hero sells the first-run
-# experience exactly as a new user sees it.
+# Boot splash → dashboard → expand the two headline panels. The splash
+# auto-plays (~2s), the dashboard settles, then the tape jumps to the
+# activity panel and the usage panel and expands each (a/u are the real
+# panel-jump keys; Enter expands) so the hero shows the app moving instead
+# of idling on collapsed rows.
 #
 # Regenerate:  vhs demo/hero.tape   (from the repo root)
 
@@ -30,8 +31,20 @@ Show
 # Boot splash: kitten fades in, waves, CLYDE wordmark types in (~2s).
 Sleep 2500ms
 
-# Hold the settled dashboard: mascot animates, panels breathe.
-Sleep 6500ms
+# Let the dashboard settle for a beat.
+Sleep 2s
+
+# Jump to the activity panel and expand it — the agent tree unfolds.
+Type "a"
+Sleep 400ms
+Enter
+Sleep 2500ms
+
+# Jump to the usage panel and expand it — plan bars + reset countdowns.
+Type "u"
+Sleep 400ms
+Enter
+Sleep 3500ms
 
 Hide
 Type "q"
