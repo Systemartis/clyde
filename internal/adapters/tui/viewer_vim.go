@@ -118,6 +118,9 @@ func vimHintLine() string {
 // modern-editor instead of vim-pure: ←↑↓→ moves, type to insert, esc
 // returns to view, ⌃s saves. Word motion via ⌃←/⌃→ or ⌥←/⌥→ on Mac,
 // undo/redo via ⌃z/⌃y, shift+arrow extends selection, ⌃c copies.
+//
+// Select-all is bound to ⌘/Super+A (⌃a is line-start), so the hint advertises
+// ⌘a — advertising ⌃a would send users to line-start instead of select-all.
 func editHintLine() string {
-	return "shift+arrow select  ⌃c copy  ⌃a all  ⌃z undo  ⌃s save  esc view"
+	return "shift+arrow select  ⌃c copy  ⌘a all  ⌃z undo  ⌃s save  esc view"
 }

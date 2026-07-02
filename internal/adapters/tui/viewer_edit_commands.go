@@ -117,7 +117,7 @@ func (m Model) popUndo() Model {
 	snap := m.viewerHistory[len(m.viewerHistory)-1]
 	m.viewerHistory = m.viewerHistory[:len(m.viewerHistory)-1]
 	m.viewerEdit = snap
-	m.viewerDirty = true
+	m.viewerDirty = m.bufferDiffersFromClean()
 	return m
 }
 
@@ -136,8 +136,19 @@ func (m Model) popRedo() Model {
 	snap := m.viewerRedo[len(m.viewerRedo)-1]
 	m.viewerRedo = m.viewerRedo[:len(m.viewerRedo)-1]
 	m.viewerEdit = snap
-	m.viewerDirty = true
+	m.viewerDirty = m.bufferDiffersFromClean()
 	return m
+}
+
+// bufferDiffersFromClean reports whether the edit buffer differs from the
+// last-loaded/saved content, i.e. whether there are unsaved changes. Used by
+// undo / redo so that stepping back to the on-disk content clears the dirty
+// marker instead of leaving it stuck (vim clears `modified` when you undo to
+// the saved state). viewerCachedContent is the clean reference: it is set on
+// file load (loadViewerFile) and on save (saveViewerBuffer), both of which also
+// reset viewerDirty=false.
+func (m Model) bufferDiffersFromClean() bool {
+	return m.viewerEdit.String() != m.viewerCachedContent
 }
 
 // ─── Command mode ─────────────────────────────────────────────────────────────
@@ -313,6 +324,11 @@ func (m Model) runSubstitute(sub substituteSpec) Model {
 		}
 	}
 	m.viewerEdit = m.viewerEdit.clampCursor()
+	// Any recorded find matches were computed against the pre-substitute
+	// content; their offsets no longer line up, so drop them rather than
+	// paint stale highlights over the mutated text.
+	m.viewerFindMatches = nil
+	m.viewerFindIdx = 0
 	m.viewerStatus = fmt.Sprintf("replaced %d occurrence(s)", count)
 	return m
 }

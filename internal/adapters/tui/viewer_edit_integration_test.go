@@ -25,6 +25,53 @@ func editTestModel(t *testing.T, initial string) (Model, string) {
 	return m, path
 }
 
+// TestEnterEditMode_ClearsStaleFindMatches is the regression for stale find
+// highlights surviving into edit mode. After a find, pressing `i` must drop the
+// recorded matches so they can't be painted against a now-mutating buffer.
+func TestEnterEditMode_ClearsStaleFindMatches(t *testing.T) {
+	t.Parallel()
+	m, _ := editTestModel(t, "alpha\nbeta\nalpha\n")
+	m = mustUpdate(t, m, tea.KeyPressMsg{Code: '/'})
+	for _, r := range "alpha" {
+		m = mustUpdate(t, m, tea.KeyPressMsg{Code: r, Text: string(r)})
+	}
+	m = mustUpdate(t, m, tea.KeyPressMsg{Code: tea.KeyEnter})
+	if len(m.viewerFindMatches) == 0 {
+		t.Fatalf("setup: expected find matches before entering edit mode")
+	}
+	m = mustUpdate(t, m, tea.KeyPressMsg{Code: 'i'})
+	if m.viewerMode != ViewerEdit {
+		t.Fatalf("setup: expected ViewerEdit after i")
+	}
+	if len(m.viewerFindMatches) != 0 {
+		t.Errorf("entering edit mode should clear stale find matches, got %d", len(m.viewerFindMatches))
+	}
+	if m.viewerFindIdx != 0 {
+		t.Errorf("find index should reset on edit-mode entry, got %d", m.viewerFindIdx)
+	}
+}
+
+// TestFindMatches_NotPaintedInEditMode guards the renderer: even if find matches
+// somehow linger, the find-highlight overlay must not be applied while editing
+// (the styled output must be identical with and without the matches present).
+func TestFindMatches_NotPaintedInEditMode(t *testing.T) {
+	t.Parallel()
+	m, _ := editTestModel(t, "alpha beta gamma\n")
+	m = mustUpdate(t, m, tea.KeyPressMsg{Code: 'i'}) // enter edit mode
+	if m.viewerMode != ViewerEdit {
+		t.Fatalf("setup: expected ViewerEdit after i")
+	}
+	// Inject a stale match directly (bypassing the clear-on-enter path).
+	m.viewerFindMatches = []findMatch{{Line: 0, Col: 0, End: 5}}
+	m.viewerFindIdx = 0
+	withMatches := m.renderViewerPanel(120, 25) // keep ANSI: highlight is a bg color
+	m.viewerFindMatches = nil
+	without := m.renderViewerPanel(120, 25)
+	if withMatches != without {
+		t.Error("find-match highlights must not be painted while in edit mode")
+	}
+}
+
 func TestEdit_iEntersInsert_EscReturns(t *testing.T) {
 	t.Parallel()
 	m, _ := editTestModel(t, "hello\n")

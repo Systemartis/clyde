@@ -59,6 +59,61 @@ func TestNewEditBuffer(t *testing.T) {
 	}
 }
 
+// TestPopUndo_ClearsDirtyWhenBufferMatchesCleanContent is the regression for
+// the reported bug where undoing all the way back to the on-disk content still
+// left viewerDirty=true (forcing the user into :q!). Dirtiness is now derived
+// from a comparison against the last-loaded/saved content.
+func TestPopUndo_ClearsDirtyWhenBufferMatchesCleanContent(t *testing.T) {
+	t.Parallel()
+	m := NewModel()
+	m.viewerCachedContent = "hello\n"
+	m.viewerEdit = newEditBuffer("hello\n")
+	m.viewerMode = ViewerEdit
+	m = m.pushHistory() // snapshot the clean buffer
+	m.viewerEdit = insertRune(m.viewerEdit, 'X')
+	m.viewerDirty = true
+
+	m = m.popUndo()
+	if got := m.viewerEdit.String(); got != "hello\n" {
+		t.Fatalf("after undo buffer = %q, want %q", got, "hello\n")
+	}
+	if m.viewerDirty {
+		t.Error("undo back to cached (on-disk) content should clear viewerDirty")
+	}
+
+	// Redo forward to the divergent state → dirty must return.
+	m = m.popRedo()
+	if got := m.viewerEdit.String(); got != "Xhello\n" {
+		t.Fatalf("after redo buffer = %q, want %q", got, "Xhello\n")
+	}
+	if !m.viewerDirty {
+		t.Error("redo to a buffer differing from cached content should set viewerDirty")
+	}
+}
+
+// TestPopUndo_KeepsDirtyWhenStillDivergent verifies the flag stays true when an
+// undo lands on a state that still differs from the saved content.
+func TestPopUndo_KeepsDirtyWhenStillDivergent(t *testing.T) {
+	t.Parallel()
+	m := NewModel()
+	m.viewerCachedContent = "a\n"
+	m.viewerEdit = newEditBuffer("a\n")
+	m.viewerMode = ViewerEdit
+	m = m.pushHistory() // clean: "a\n"
+	m.viewerEdit = insertRune(m.viewerEdit, 'X')
+	m = m.pushHistory() // "Xa\n"
+	m.viewerEdit = insertRune(m.viewerEdit, 'Y')
+	m.viewerDirty = true
+
+	m = m.popUndo() // back to "Xa\n" — still != cached "a\n"
+	if got := m.viewerEdit.String(); got != "Xa\n" {
+		t.Fatalf("after undo buffer = %q, want %q", got, "Xa\n")
+	}
+	if !m.viewerDirty {
+		t.Error("undo to a still-divergent buffer must keep viewerDirty true")
+	}
+}
+
 func TestInsertRune_AppendsAndAdvancesCol(t *testing.T) {
 	t.Parallel()
 	b := newEditBuffer("ab")
