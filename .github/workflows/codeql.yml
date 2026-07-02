@@ -49,7 +49,7 @@ jobs:
           cache: true
 
       - name: init codeql
-        uses: github/codeql-action/init@53e96ec3b35fce51c141c0d6f0e31028a448722d # v3
+        uses: github/codeql-action/init@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
         with:
           languages: go
           queries: security-and-quality
@@ -58,6 +58,6 @@ jobs:
         run: go build ./...
 
       - name: analyze
-        uses: github/codeql-action/analyze@53e96ec3b35fce51c141c0d6f0e31028a448722d # v3
+        uses: github/codeql-action/analyze@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
         with:
           category: "/language:go"
