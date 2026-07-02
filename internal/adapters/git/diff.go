@@ -174,7 +174,27 @@ func parseDiff(raw []byte) []Hunk {
 			continue
 		}
 
-		// Diff header lines (--- a/... +++ b/... diff --git ...) — skip.
+		// New file section — flush the current hunk and reset so the file
+		// header lines that follow (index, --- a/..., +++ b/..., new/deleted
+		// file mode, Binary files ..., rename from/to) are skipped by the
+		// cur == nil guard until the next @@ hunk header.
+		//
+		// This is what makes header detection positional rather than textual:
+		// a body line such as "--- removed dashes" (inside a hunk, cur != nil)
+		// is a real removed line, whereas "--- a/foo" only appears here, in the
+		// header region between a `diff --git` line and the first `@@`. A body
+		// line can never be mistaken for a header because it always carries a
+		// ' ' / '+' / '-' diff prefix, so it never starts with "diff --git ".
+		if isDiffSectionHeader(line) {
+			if cur != nil {
+				hunks = append(hunks, *cur)
+				cur = nil
+			}
+			continue
+		}
+
+		// Diff header lines (--- a/... +++ b/... index ...) before the first
+		// hunk of a section — skip.
 		if cur == nil {
 			continue
 		}
@@ -210,6 +230,16 @@ func parseDiff(raw []byte) []Hunk {
 	}
 
 	return hunks
+}
+
+// isDiffSectionHeader reports whether line begins a new per-file diff section.
+// git emits "diff --git a/f b/f" for ordinary diffs and "diff --cc" /
+// "diff --combined" for merge diffs. Body lines can never match because they
+// always carry a leading ' ' / '+' / '-' diff-marker byte.
+func isDiffSectionHeader(line string) bool {
+	return strings.HasPrefix(line, "diff --git ") ||
+		strings.HasPrefix(line, "diff --cc ") ||
+		strings.HasPrefix(line, "diff --combined ")
 }
 
 // parseHunkHeader parses a line like "@@ -42,7 +46,18 @@ authenticate(token)"

@@ -165,6 +165,80 @@ func TestStatus_NotARepo(t *testing.T) {
 	}
 }
 
+// TestStatus_NonASCIIAndSpacePaths verifies (end-to-end, via real git) that
+// non-ASCII and space-containing filenames come back verbatim rather than
+// C-quoted (e.g. "caf\303\251.txt"). This exercises the `-z` porcelain path.
+func TestStatus_NonASCIIAndSpacePaths(t *testing.T) {
+	t.Parallel()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeFile(t, dir, "café.txt", "x\n")
+	writeFile(t, dir, "with space.txt", "y\n")
+
+	var s git.Source
+	statuses, err := s.Status(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := map[string]bool{"café.txt": false, "with space.txt": false}
+	for _, st := range statuses {
+		if _, ok := want[st.Path]; ok {
+			want[st.Path] = true
+		}
+	}
+	for name, seen := range want {
+		if !seen {
+			t.Errorf("status missing verbatim path %q (got %+v)", name, statuses)
+		}
+	}
+}
+
+// TestStatus_StagedRename verifies a staged rename yields a single entry with
+// the NEW path (the trailing NUL-separated old-path field is discarded).
+func TestStatus_StagedRename(t *testing.T) {
+	t.Parallel()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	dir := t.TempDir()
+	initRepo(t, dir)
+	writeFile(t, dir, "orig.txt", "hello\n")
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.CommandContext(context.Background(), "git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run("add", "orig.txt")
+	run("commit", "-m", "add orig")
+	run("mv", "orig.txt", "renamed.txt")
+
+	var s git.Source
+	statuses, err := s.Status(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(statuses) != 1 {
+		t.Fatalf("want 1 status for a rename, got %d (%+v)", len(statuses), statuses)
+	}
+	st := statuses[0]
+	if st.Path != "renamed.txt" {
+		t.Errorf("path = %q, want renamed.txt (old-path field should be discarded)", st.Path)
+	}
+	if st.Status != 'R' {
+		t.Errorf("status = %c, want R", st.Status)
+	}
+	if !st.Staged {
+		t.Error("staged = false, want true")
+	}
+}
+
 // ─── Branch ───────────────────────────────────────────────────────────────────
 
 // TestBranch_MainBranch: fresh repo on default branch returns a branch name.
