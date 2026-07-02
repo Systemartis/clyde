@@ -24,9 +24,20 @@ type Client struct {
 	// now is the time source. Override in tests via NewClientWithClock.
 	now func() time.Time
 
+	// loadCreds loads credentials and reports their provenance. It is a seam
+	// (not a direct call to loadCredentialsWithSource) so tests can supply
+	// fake sources without touching the real Keychain or file.
+	loadCreds func() (Credentials, credSource, error)
+
+	// saveFile persists refreshed credentials back to the file. It is a seam
+	// so tests never write the real ~/.claude/.credentials.json. It is only
+	// invoked for file-sourced credentials (see the refresh policy below).
+	saveFile func(Credentials) error
+
 	mu          sync.Mutex
 	credsCached Credentials // last-known good credentials (in-memory cache)
 	credsLoaded bool        // becomes true after first successful load
+	credsSource credSource  // where credsCached was read from
 }
 
 // compile-time interface assertion.
@@ -38,6 +49,8 @@ func NewClient() *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		now:        func() time.Time { return time.Now().UTC() },
+		loadCreds:  loadCredentialsWithSource,
+		saveFile:   SaveCredentials,
 	}
 }
 
@@ -50,7 +63,12 @@ func NewClientWithDeps(httpClient *http.Client, now func() time.Time) *Client {
 	if now == nil {
 		now = func() time.Time { return time.Now().UTC() }
 	}
-	return &Client{httpClient: httpClient, now: now}
+	return &Client{
+		httpClient: httpClient,
+		now:        now,
+		loadCreds:  loadCredentialsWithSource,
+		saveFile:   SaveCredentials,
+	}
 }
 
 // Fetch implements ports.PlanUsageSource. It returns the current plan-quota
@@ -95,7 +113,7 @@ func (c *Client) ensureCredentials(ctx context.Context) (Credentials, error) {
 	defer c.mu.Unlock()
 
 	if !c.credsLoaded {
-		loaded, err := LoadCredentials()
+		loaded, src, err := c.loadCreds()
 		if err != nil {
 			if errors.Is(err, ErrCredentialsNotFound) {
 				return Credentials{}, ports.ErrPlanUsageUnavailable
@@ -103,28 +121,69 @@ func (c *Client) ensureCredentials(ctx context.Context) (Credentials, error) {
 			return Credentials{}, fmt.Errorf("load credentials: %w", err)
 		}
 		c.credsCached = loaded
+		c.credsSource = src
 		c.credsLoaded = true
 	}
 
-	if c.credsCached.Expired(c.now()) {
-		refreshed, err := refreshTokens(ctx, c.httpClient, c.credsCached)
-		if err != nil {
-			if errors.Is(err, ErrInvalidGrant) {
-				return Credentials{}, ports.ErrPlanUsageAuth
-			}
-			return Credentials{}, fmt.Errorf("refresh token: %w", err)
-		}
-		c.credsCached = refreshed
-		// Best-effort persist for other clyde processes.
-		_ = SaveCredentials(refreshed)
+	if !c.credsCached.Expired(c.now()) {
+		return c.credsCached, nil
 	}
+
+	// Token expired. How we recover depends on WHERE it came from — the
+	// overriding rule is that clyde must never put the user's Claude Code
+	// login at risk.
+	if c.credsSource != sourceFile {
+		// Keychain (or unknown) source: clyde is a READ-ONLY consumer. A
+		// refresh would rotate the refresh token that Claude Code shares via
+		// the Keychain, and clyde has no safe, verifiable way to write the
+		// rotated token back — doing so could invalidate the Keychain token
+		// Claude Code depends on and log the user out of the CLI. Instead we
+		// re-read: Claude Code keeps its own Keychain token fresh, so pick
+		// that up if it has been refreshed; otherwise fall back to the
+		// graceful "plan offline" state until it is.
+		if reloaded, src, err := c.loadCreds(); err == nil &&
+			src == c.credsSource && !reloaded.Expired(c.now()) {
+			c.credsCached = reloaded
+			return c.credsCached, nil
+		}
+		return Credentials{}, ports.ErrPlanUsageUnavailable
+	}
+
+	// File source: clyde and Claude Code share the file, so refreshing and
+	// writing the rotated token back to the SAME file keeps both in sync.
+	refreshed, err := refreshTokens(ctx, c.httpClient, c.credsCached)
+	if err != nil {
+		if errors.Is(err, ErrInvalidGrant) {
+			return Credentials{}, ports.ErrPlanUsageAuth
+		}
+		return Credentials{}, fmt.Errorf("refresh token: %w", err)
+	}
+	c.credsCached = refreshed
+	// Best-effort persist back to the same store it was read from.
+	_ = c.saveFile(refreshed)
 	return c.credsCached, nil
 }
 
-// refreshAndStore is the post-401 retry path: refresh and update the cache.
+// refreshAndStore is the post-401 retry path: recover fresh credentials and
+// update the cache. It applies the same source-aware safety policy as
+// ensureCredentials — a Keychain-sourced token is never rotated by clyde.
 func (c *Client) refreshAndStore(ctx context.Context, current Credentials) (Credentials, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.credsSource != sourceFile {
+		// Keychain (or unknown) source: never rotate the shared refresh
+		// token. Try to pick up a token Claude Code refreshed into the
+		// Keychain; if there is no newer one, decline gracefully rather than
+		// refresh (see ensureCredentials for the full rationale).
+		if reloaded, src, err := c.loadCreds(); err == nil &&
+			src == c.credsSource && reloaded.AccessToken != current.AccessToken {
+			c.credsCached = reloaded
+			return reloaded, nil
+		}
+		return Credentials{}, ports.ErrPlanUsageUnavailable
+	}
+
 	refreshed, err := refreshTokens(ctx, c.httpClient, current)
 	if err != nil {
 		if errors.Is(err, ErrInvalidGrant) {
@@ -133,7 +192,7 @@ func (c *Client) refreshAndStore(ctx context.Context, current Credentials) (Cred
 		return Credentials{}, fmt.Errorf("refresh token: %w", err)
 	}
 	c.credsCached = refreshed
-	_ = SaveCredentials(refreshed)
+	_ = c.saveFile(refreshed)
 	return refreshed, nil
 }
 
