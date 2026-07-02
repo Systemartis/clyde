@@ -505,6 +505,13 @@ type cacheCreationObj struct {
 // msgID is empty for non-assistant events and for assistant events that lack a
 // message.id field (older JSONL files).
 func decodeLineWithMsgID(raw []byte) (ev event.Event, msgID string, err error) {
+	// Enforce the reader's line cap here too: the Scanner buffer already
+	// bounds lines at scannerMaxToken, so anything larger reaching this
+	// decoder is garbage input (or a fuzz-grown blob) — reject it before
+	// json.Unmarshal spends real time on it.
+	if len(raw) > scannerMaxToken {
+		return event.Event{}, "", fmt.Errorf("line too large: %d bytes (max %d)", len(raw), scannerMaxToken)
+	}
 	var env envelope
 	if jsonErr := json.Unmarshal(raw, &env); jsonErr != nil {
 		return event.Event{}, "", fmt.Errorf("decode envelope: %w", jsonErr)

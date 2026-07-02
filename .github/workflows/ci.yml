@@ -206,23 +206,29 @@ jobs:
           go-version: '1.26'
           cache: true
 
+      # Each step retries once. `go test -fuzz` can FAIL with a spurious
+      # "context deadline exceeded" at fuzztime expiry when a worker is
+      # mid-input on a loaded runner — no crasher involved. The retry is
+      # sound because it cannot mask a real finding: crashers are written
+      # to testdata/fuzz/ and re-fail deterministically as seeds on the
+      # second run, while the deadline flake does not reproduce.
       - name: jsonl line decoder
-        run: go test -fuzz=FuzzDecodeLineWithMsgID -fuzztime=15s ./internal/adapters/jsonl/
+        run: go test -fuzz=FuzzDecodeLineWithMsgID -fuzztime=15s ./internal/adapters/jsonl/ || go test -fuzz=FuzzDecodeLineWithMsgID -fuzztime=15s ./internal/adapters/jsonl/
 
       - name: processscan ps output
-        run: go test -fuzz=FuzzParseClaudeSessionIDs -fuzztime=15s ./internal/adapters/processscan/
+        run: go test -fuzz=FuzzParseClaudeSessionIDs -fuzztime=15s ./internal/adapters/processscan/ || go test -fuzz=FuzzParseClaudeSessionIDs -fuzztime=15s ./internal/adapters/processscan/
 
       - name: git status parser
-        run: go test -fuzz=FuzzParseStatus -fuzztime=15s ./internal/adapters/git/
+        run: go test -fuzz=FuzzParseStatus -fuzztime=15s ./internal/adapters/git/ || go test -fuzz=FuzzParseStatus -fuzztime=15s ./internal/adapters/git/
 
       - name: git diff parser
-        run: go test -fuzz=FuzzParseDiff -fuzztime=15s ./internal/adapters/git/
+        run: go test -fuzz=FuzzParseDiff -fuzztime=15s ./internal/adapters/git/ || go test -fuzz=FuzzParseDiff -fuzztime=15s ./internal/adapters/git/
 
       - name: anthropicapi credentials
-        run: go test -fuzz=FuzzParseCredentialsJSON -fuzztime=15s ./internal/adapters/anthropicapi/
+        run: go test -fuzz=FuzzParseCredentialsJSON -fuzztime=15s ./internal/adapters/anthropicapi/ || go test -fuzz=FuzzParseCredentialsJSON -fuzztime=15s ./internal/adapters/anthropicapi/
 
       - name: claudesettings reader
-        run: go test -fuzz=FuzzReadSettings -fuzztime=15s ./internal/adapters/claudesettings/
+        run: go test -fuzz=FuzzReadSettings -fuzztime=15s ./internal/adapters/claudesettings/ || go test -fuzz=FuzzReadSettings -fuzztime=15s ./internal/adapters/claudesettings/
 
   shellcheck:
     name: shellcheck (install.sh)

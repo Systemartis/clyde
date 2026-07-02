@@ -38,3 +38,22 @@ func FuzzDecodeLineWithMsgID(f *testing.F) {
 		_, _, _ = decodeLineWithMsgID(raw)
 	})
 }
+
+// TestDecodeLineWithMsgID_RejectsOversizedLine pins the input bound: the
+// production reader caps lines at scannerMaxToken via the Scanner buffer, so
+// the decoder must enforce the same invariant when called directly. Without
+// it, mutation-grown fuzz inputs reach json.Unmarshal unbounded and can run
+// long enough to trip the fuzz engine's shutdown deadline on slow runners.
+func TestDecodeLineWithMsgID_RejectsOversizedLine(t *testing.T) {
+	t.Parallel()
+	// A syntactically VALID oversized line: without the bound it decodes
+	// successfully (slowly); with the bound it must be rejected up front.
+	pad := make([]byte, scannerMaxToken)
+	for i := range pad {
+		pad[i] = 'a'
+	}
+	big := []byte(`{"type":"assistant","pad":"` + string(pad) + `"}`)
+	if _, _, err := decodeLineWithMsgID(big); err == nil {
+		t.Fatal("decodeLineWithMsgID accepted an oversized line; want error")
+	}
+}
