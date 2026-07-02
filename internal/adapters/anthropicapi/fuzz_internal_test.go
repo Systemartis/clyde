@@ -19,3 +19,20 @@ func FuzzParseCredentialsJSON(f *testing.F) {
 		_, _ = parseCredentialsJSON(raw)
 	})
 }
+
+// TestParseCredentialsJSON_RejectsOversizedInput pins the input bound: real
+// credentials files are a few hundred bytes, so anything past the cap is
+// rejected before JSON decoding. Without the bound, mutation-grown fuzz
+// inputs (or a corrupt multi-megabyte file) reach json.Unmarshal and can run
+// long enough to trip the fuzz engine's shutdown deadline on slow runners —
+// the "context deadline exceeded" CI flake.
+func TestParseCredentialsJSON_RejectsOversizedInput(t *testing.T) {
+	t.Parallel()
+	big := make([]byte, maxCredentialsBytes+1)
+	for i := range big {
+		big[i] = ' '
+	}
+	if _, err := parseCredentialsJSON(big); err == nil {
+		t.Fatal("parseCredentialsJSON accepted an oversized input; want error")
+	}
+}
