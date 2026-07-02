@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-02
+
+First stable release — the repository goes public with this tag. 1.0.0 is the sum of the two release candidates below: the full feature set from [1.0.0-rc.1] plus the 38-defect hardening pass from [1.0.0-rc.2], with these final touches on top:
+
+### Fixed
+- Credentials parsing bounds its input before JSON decoding (closes the fuzz-timeout CI flake and caps garbage-input cost).
+
+### Changed
+- Dependencies refreshed: lipgloss v2.0.4, chroma v2.27.0, and the pinned GitHub Actions (checkout v7, setup-go v6.5, upload-artifact v7, scorecard-action).
+
+### Docs
+- Hero demo now expands the activity and usage panels instead of idling on a static dashboard.
+- Removed the Go Report Card badge (the service is retired) and moved the OpenSSF Scorecard badge to the scorecard.dev domain.
+
 ## [1.0.0-rc.2] - 2026-07-02
 
 Hardening pass ahead of the public 1.0.0: a multi-dimension audit surfaced 38 defects; all are fixed here, and the README + demo recordings were rebuilt around the real application.
@@ -30,9 +44,9 @@ Hardening pass ahead of the public 1.0.0: a multi-dimension audit surfaced 38 de
 - `assets/` replaced by four reproducible VHS tapes + GIFs under `demo/` (hero, observability, workspace, customization) — every keypress is a live binding and recordings are sandboxed from the real config.
 - SLSA claims corrected to Build Level 2 in `SUPPLY_CHAIN.md` and the release workflow.
 
-## [1.0.0] - 2026-06-12
+## [1.0.0-rc.1] - 2026-06-12
 
-First public release. A terminal companion TUI for Claude Code: tile it next to your `claude` pane and see live sessions, tool activity, token usage and plan limits, todos, git diff, file explorer, and MCP servers — offline, no account, reading only the files Claude Code already writes.
+First release candidate. A terminal companion TUI for Claude Code: tile it next to your `claude` pane and see live sessions, tool activity, token usage and plan limits, todos, git diff, file explorer, and MCP servers — offline, no account, reading only the files Claude Code already writes.
 
 ### Added
 - Multi-panel dashboard (now, activity, usage, diff, explorer, servers, bash ledger, cache efficiency) with three layouts (stack, tabs, multi-col), seven themes, mouse support, and per-panel help.
@@ -54,6 +68,7 @@ First public release. A terminal companion TUI for Claude Code: tile it next to 
 - Credentials are read-only: clyde never writes or refreshes the Claude Code OAuth token, and denying Keychain access degrades gracefully.
 - CI: gosec, Semgrep, CodeQL, govulncheck, gitleaks config, OpenSSF Scorecard, SHA-pinned actions, default-deny workflow permissions, fuzz harnesses on every parser.
 
-[Unreleased]: https://github.com/Systemartis/clyde/compare/v1.0.0-rc.2...HEAD
-[1.0.0-rc.2]: https://github.com/Systemartis/clyde/releases/tag/v1.0.0-rc.2
+[Unreleased]: https://github.com/Systemartis/clyde/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/Systemartis/clyde/releases/tag/v1.0.0
+[1.0.0-rc.2]: https://github.com/Systemartis/clyde/releases/tag/v1.0.0-rc.2
+[1.0.0-rc.1]: https://github.com/Systemartis/clyde/releases/tag/v1.0.0-rc.1

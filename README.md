@@ -7,8 +7,7 @@
 A terminal companion for [Claude Code](https://claude.com/claude-code). Tile it next to your `claude` pane and watch sessions, agents, tokens, diffs, and project state — live, without leaving the terminal.
 
 [![CI](https://github.com/Systemartis/clyde/actions/workflows/ci.yml/badge.svg)](https://github.com/Systemartis/clyde/actions/workflows/ci.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/Systemartis/clyde/badge)](https://securityscorecards.dev/viewer/?uri=github.com/Systemartis/clyde)
-[![Go Report Card](https://goreportcard.com/badge/github.com/Systemartis/clyde)](https://goreportcard.com/report/github.com/Systemartis/clyde)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Systemartis/clyde/badge)](https://scorecard.dev/viewer/?uri=github.com/Systemartis/clyde)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Systemartis/clyde.svg)](https://pkg.go.dev/github.com/Systemartis/clyde)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -71,7 +70,7 @@ The GIFs above are generated from [`demo/*.tape`](demo/README.md) with [VHS](htt
 curl -fsSL https://raw.githubusercontent.com/Systemartis/clyde/main/install.sh | sh
 ```
 
-Detects your OS + arch, fetches the matching archive, verifies the cosign keyless signature (if `cosign` is on `$PATH`), checks the sha256 against `checksums.txt`, and drops the binary into `$HOME/.local/bin`. Override with `INSTALL_DIR=...` or pin a specific tag with `VERSION=v1.0.0-rc.2` (see comments at the top of [`install.sh`](install.sh)).
+Detects your OS + arch, fetches the matching archive, verifies the cosign keyless signature (if `cosign` is on `$PATH`), checks the sha256 against `checksums.txt`, and drops the binary into `$HOME/.local/bin`. Override with `INSTALL_DIR=...` or pin a specific tag with `VERSION=v1.0.0` (see comments at the top of [`install.sh`](install.sh)).
 
 If you don't have `cosign` installed yet, you'll get a warning that the install proceeded with sha256 verification only. For full supply-chain verification install cosign first (`brew install cosign`) — see [SUPPLY_CHAIN.md](SUPPLY_CHAIN.md).
 
@@ -80,7 +79,7 @@ If you don't have `cosign` installed yet, you'll get a warning that the install 
 Each release ships a `tar.gz` for `linux/{amd64,arm64}` and `darwin/{amd64,arm64}` plus a `checksums.txt`, an SPDX SBOM per archive, and a cosign signature. See [SUPPLY_CHAIN.md](SUPPLY_CHAIN.md) for the full verify recipe.
 
 ```sh
-VERSION=1.0.0-rc.2
+VERSION=1.0.0
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 curl -fsSL "https://github.com/Systemartis/clyde/releases/download/v${VERSION}/clyde_${VERSION}_${OS}_${ARCH}.tar.gz" \
