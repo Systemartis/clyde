@@ -969,12 +969,16 @@ func TestStatusBarHasCommandsHint(t *testing.T) {
 	t.Parallel()
 	m := NewModel()
 
-	plain := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, false))
+	// The version is now injected (single source of truth from
+	// internal/version). Pass a distinctive string and assert it appears —
+	// proving the footer renders the injected version, not a hardcode.
+	const injectedVer = "v9.9.9-test"
+	plain := stripANSI(renderStatusBar(m.styles, 130, false, "", nil, false, injectedVer))
 	if !strings.Contains(plain, "commands") {
 		t.Errorf("status bar must include the `h commands` hint; got:\n%s", plain)
 	}
-	if !strings.Contains(plain, "v0.6") {
-		t.Errorf("status bar must include the version on the right; got:\n%s", plain)
+	if !strings.Contains(plain, injectedVer) {
+		t.Errorf("status bar must render the injected version %q on the right; got:\n%s", injectedVer, plain)
 	}
 	// The old per-panel hints (mode/explorer/calls/diff) MUST be gone —
 	// they moved into the panel-help overlay.

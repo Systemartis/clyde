@@ -25,7 +25,7 @@ func (m Model) renderStack() string {
 
 	titleBar := renderTitleBar(m.styles, m.palette, m.data, m.frame, w, m.demoMode, m.liveView, m.liveView.LastUpdate)
 	notification := renderNotificationMaybe(m.styles, m.palette, w, m.cfg.NotificationStyle, m.notifAck, m.hookNotif, m.compaction, m.quotaNotif)
-	statusBar := renderStatusBar(m.styles, w, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen)
+	statusBar := renderStatusBar(m.styles, w, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen, m.version)
 
 	// Fullscreen notification: replace the panel grid with an animated
 	// overlay so the user can't miss the prompt. The titlebar and status

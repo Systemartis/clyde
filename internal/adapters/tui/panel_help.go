@@ -83,6 +83,7 @@ func helpEntriesForPanel(pid PanelID) []helpEntry {
 			{"click", "poke the mascot"},
 			{"esc", "dismiss notification"},
 			{"y / n", "answer pending hook"},
+			{"⌃n", "preview notification"},
 		}
 	}
 	return nil

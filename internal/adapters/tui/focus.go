@@ -42,6 +42,65 @@ func (m Model) advanceFocus(delta int) Model {
 	return m.setFocus(panels[next])
 }
 
+// tabStripPanels returns the panel IDs shown in the Mode B tab strip, in
+// strip order. Focus navigation and jumps in tabs mode are confined to
+// this set so the highlighted tab always matches the shown panel.
+func (m Model) tabStripPanels() []PanelID {
+	tabs := m.activeTabs(m.data)
+	ids := make([]PanelID, 0, len(tabs))
+	for _, t := range tabs {
+		ids = append(ids, t.id)
+	}
+	return ids
+}
+
+// isTabStripPanel reports whether pid is one of the tab-strip panels.
+func (m Model) isTabStripPanel(pid PanelID) bool {
+	for _, id := range m.tabStripPanels() {
+		if id == pid {
+			return true
+		}
+	}
+	return false
+}
+
+// tabFocused resolves which tab panel is shown/focused in tabs mode. It is
+// m.focused when that panel is in the strip, otherwise the first tab — so
+// the strip highlight, the shown panel, and mouse bounds never disagree
+// even if focus was left on an off-strip panel (e.g. the explorer) before
+// switching to tabs mode.
+func (m Model) tabFocused() PanelID {
+	panels := m.tabStripPanels()
+	for _, id := range panels {
+		if id == m.focused {
+			return m.focused
+		}
+	}
+	if len(panels) > 0 {
+		return panels[0]
+	}
+	return m.focused
+}
+
+// advanceTabFocus cycles focus across the tab-strip panels only (delta=+1
+// forward, -1 backward). Unlike advanceFocus it never lands on a panel
+// that isn't a tab, so ←/→/tab in tabs mode can't desync the strip.
+func (m Model) advanceTabFocus(delta int) Model {
+	panels := m.tabStripPanels()
+	if len(panels) == 0 {
+		return m
+	}
+	cur := 0
+	for i, pid := range panels {
+		if pid == m.focused {
+			cur = i
+			break
+		}
+	}
+	next := (cur + delta + len(panels)) % len(panels)
+	return m.setFocus(panels[next])
+}
+
 // setFocus changes the focused panel without changing its collapse state.
 // Focus navigation (Tab, ↑, ↓, ←, →) never auto-expands panels.
 // Use collapse[pid].Expand() or Toggle() explicitly when expansion is intended.

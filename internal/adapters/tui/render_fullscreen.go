@@ -18,7 +18,7 @@ import "strings"
 // and reaching for a separate vscode window.
 func (m Model) renderFullscreenViewer() string {
 	titleBar := renderTitleBar(m.styles, m.palette, m.data, m.frame, m.width, m.demoMode, m.liveView, m.liveView.LastUpdate)
-	statusBar := renderStatusBar(m.styles, m.width, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen)
+	statusBar := renderStatusBar(m.styles, m.width, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen, m.version)
 
 	titleLines := strings.Count(titleBar, "\n") + 1
 	statusLines := strings.Count(statusBar, "\n") + 1

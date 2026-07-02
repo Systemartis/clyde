@@ -59,7 +59,14 @@ func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	// the query, not jump around).
 	if !m.viewerActive && !m.hookNotif.Active && msg.Mod == 0 && !explorerSearching {
 		if handled, model := m.handlePanelJumpKey(msg.Code); handled {
-			return model, nil
+			// In tabs mode only honor jumps to panels that live in the tab
+			// strip. Jumping to a non-tab panel (explorer/servers/bash/cache)
+			// would render that panel full-screen while the strip still
+			// highlights a tab — a desynced, misleading UI state. Ignore the
+			// jump and fall through (it becomes a harmless no-op).
+			if m.effectiveMode() != LayoutTabs || m.isTabStripPanel(model.focused) {
+				return model, nil
+			}
 		}
 	}
 	if handled, model := m.handleHookPendingKey(msg); handled {
@@ -872,6 +879,10 @@ func (m Model) handleDefaultKey(msg tea.KeyPressMsg) Model {
 	// Navigation keys — always available regardless of collapse state
 	switch msg.Code {
 	case tea.KeyTab:
+		if m.effectiveMode() == LayoutTabs {
+			// Tabs mode cycles within the tab strip only.
+			return m.advanceTabFocus(tabDelta(msg.Mod))
+		}
 		return m.advanceFocus(tabDelta(msg.Mod))
 	case tea.KeyUp:
 		return m.handleArrowUp()
@@ -958,12 +969,15 @@ func (m Model) explorerActivate() Model {
 	return m
 }
 
-// handleTabJump processes numeric 1-4 panel jumps in tab mode.
+// handleTabJump processes numeric tab jumps (1..N) in tabs mode. The index
+// maps directly onto the visible tab strip (m.activeTabs), so the jump keys
+// stay in lockstep with what's shown and with renderTabStatusBar's "1-N
+// jump" hint — no dead keys, no unreachable tabs.
 func (m Model) handleTabJump(code rune) Model {
-	tabPanels := []PanelID{PanelNow, PanelCalls, PanelDiff, PanelUsage}
+	tabs := m.activeTabs(m.data)
 	idx := int(code - '1')
-	if idx >= 0 && idx < len(tabPanels) {
-		m = m.setFocus(tabPanels[idx])
+	if idx >= 0 && idx < len(tabs) {
+		m = m.setFocus(tabs[idx].id)
 	}
 	return m
 }
@@ -1256,7 +1270,7 @@ func (m Model) handleArrowDown() Model {
 func (m Model) handleArrowLeft() Model {
 	switch m.effectiveMode() {
 	case LayoutTabs:
-		m = m.advanceFocus(-1)
+		m = m.advanceTabFocus(-1)
 	case LayoutMultiCol:
 		m = m.focusPrevColumn()
 	case LayoutStack:
@@ -1272,7 +1286,7 @@ func (m Model) handleArrowLeft() Model {
 func (m Model) handleArrowRight() Model {
 	switch m.effectiveMode() {
 	case LayoutTabs:
-		m = m.advanceFocus(1)
+		m = m.advanceTabFocus(1)
 	case LayoutMultiCol:
 		m = m.focusNextColumn()
 	case LayoutStack:

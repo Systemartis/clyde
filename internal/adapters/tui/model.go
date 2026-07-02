@@ -15,6 +15,7 @@ import (
 	"github.com/Systemartis/clyde/internal/application/livesession"
 	"github.com/Systemartis/clyde/internal/domain/project"
 	"github.com/Systemartis/clyde/internal/ports"
+	"github.com/Systemartis/clyde/internal/version"
 )
 
 // PanelID identifies a focusable panel.
@@ -88,6 +89,12 @@ type Model struct {
 	// from baseCfg.EffectiveFor(cwd) on every save.
 	baseCfg Config
 	keymap  KeyMap
+
+	// version is the build version string shown in the status-bar footer.
+	// Single source of truth: defaulted from internal/version.Info() at
+	// construction so a shipped binary shows its real tag instead of a
+	// hardcoded proto string. Tests pin it for stable golden output.
+	version string
 
 	// Layout mode: stack, tabs, or multi-col
 	layoutMode LayoutMode
@@ -779,6 +786,7 @@ func newBaseModel(cfg Config, layoutOverride LayoutMode) Model {
 		cfg:        cfg,
 		baseCfg:    cfg,
 		keymap:     DefaultKeyMap(),
+		version:    version.Info().Version,
 		layoutMode: mode,
 		// Default focus skips PanelNow — it's non-selectable (no scroll,
 		// no actions) and would land the user on a "stuck" panel on
@@ -881,7 +889,7 @@ func (m Model) View() tea.View {
 			bootScreenEnabled: m.settingsBootScreenEnabled,
 		}
 		titleBar := renderTitleBar(m.styles, m.palette, m.data, m.frame, m.width, m.demoMode, m.liveView, m.liveView.LastUpdate)
-		statusBar := renderStatusBar(m.styles, m.width, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen)
+		statusBar := renderStatusBar(m.styles, m.width, m.isActiveMode(), m.copyToast, m.data.Sessions, m.helpOpen, m.version)
 		content = renderSettingsFullScreen(m.styles, m.palette, params, titleBar, statusBar, m.width, m.height)
 	}
 

@@ -89,14 +89,73 @@ func (m Model) buildPanelBounds() []panelBounds {
 	l := m.computeLayout()
 
 	switch {
+	case l.Mode == LayoutTabs:
+		return m.buildTabsBounds(l)
 	case l.Mode == LayoutMultiCol:
 		return m.buildMultiColBounds(l)
 	case l.Mode == LayoutStack && l.BP == BreakpointMedium:
 		return m.build2ColBounds(l)
 	default:
-		// Tabs mode and stack-narrow/wide: treat as single column.
+		// Stack-narrow/wide: single column.
 		return m.buildStackBounds(l)
 	}
+}
+
+// buildTabsBounds computes bounds for Mode B (tabs). renderTabs draws
+// title(2) + tab strip(1) + ONE full-height panel, so there is a single
+// clickable panel occupying the region below the strip. Geometry mirrors
+// renderTabs exactly (statusH is a fixed 2 rows — the tab status bar has no
+// help-expanded form). Clicks on the tab strip row itself are handled
+// separately in handleMouseClick via tabStripAtPos.
+func (m Model) buildTabsBounds(l Layout) []panelBounds {
+	const titleH = 2
+	const tabStripH = 1
+	const statusH = 2
+	notifH := notificationHeight(m.cfg.NotificationStyle, m.notifAck, m.hookNotif, m.compaction, m.quotaNotif)
+	panelH := m.height - (titleH + tabStripH + notifH + statusH)
+	if panelH < 6 {
+		panelH = 6
+	}
+	yMin := titleH + tabStripH
+	return []panelBounds{{
+		pid:  m.tabFocused(),
+		xMin: 0, xMax: l.Width - 1,
+		yMin: yMin, yMax: yMin + panelH - 1,
+	}}
+}
+
+// tabStripAtPos returns the tab index under (x, y) in the Mode B tab strip,
+// or (-1, false) when the click missed the strip or the layout isn't tabs.
+// The X math mirrors renderTabStrip: a fixed 5-col left cap ("──── "),
+// each tab body (active = "label*", inactive = "label summary"), joined by
+// a 4-col separator (" ── ").
+func (m Model) tabStripAtPos(x, y int) (int, bool) {
+	if m.effectiveMode() != LayoutTabs {
+		return -1, false
+	}
+	const titleH = 2 // tab strip is the single row right after the title bar
+	if y != titleH {
+		return -1, false
+	}
+	tabs := m.activeTabs(m.data)
+	activeIdx := activeTabIndex(tabs, m.focused)
+	cur := ansiWidth("──── ") // left cap
+	sepW := ansiWidth(" ── ") // separator between tabs
+	for i, tab := range tabs {
+		var body string
+		if i == activeIdx {
+			body = tab.label + "*"
+		} else {
+			body = tab.label + " " + tab.summary
+		}
+		w := ansiWidth(body)
+		xMin, xMax := cur, cur+w-1
+		if x >= xMin && x <= xMax {
+			return i, true
+		}
+		cur = xMax + 1 + sepW
+	}
+	return -1, false
 }
 
 // buildStackBounds computes bounds for a single-column stack layout.
@@ -421,6 +480,18 @@ func (m Model) handleMouseClick(msg tea.MouseClickMsg) (tea.Model, tea.Cmd) {
 		return m, m.snapshotCmd()
 	}
 
+	// Tabs mode: a click on the tab strip row switches to that tab. Checked
+	// before panel hit-testing because the strip sits on its own row above
+	// the single full-height panel.
+	if idx, ok := m.tabStripAtPos(msg.X, msg.Y); ok {
+		tabs := m.activeTabs(m.data)
+		if idx >= 0 && idx < len(tabs) {
+			m = m.setFocus(tabs[idx].id)
+		}
+		m = m.resetPanelClick()
+		return m, nil
+	}
+
 	pid, ok := m.panelAtPos(msg.X, msg.Y)
 	if !ok {
 		return m, nil // click outside any panel
@@ -443,6 +514,15 @@ func (m Model) handleMouseClick(msg tea.MouseClickMsg) (tea.Model, tea.Cmd) {
 	if hpid, ok := m.panelHeaderAtPos(msg.X, msg.Y); ok && hpid == pid {
 		m = m.setFocus(pid)
 		if m.effectiveMode() == LayoutStack {
+			// Collapsing the ACTIVE panel via its header must also exit
+			// active mode, matching the keyboard Space path
+			// (handleActiveModeKey). setFocus is a no-op for the
+			// already-focused panel, so it won't clear active on its own —
+			// without this the panel ends up collapsed-but-active and
+			// keyboard input keeps routing to the now-invisible viewport.
+			if m.activePanelID == pid && !m.collapse[pid].IsCollapsed() {
+				m = m.transitionToPassive()
+			}
 			m.collapse[pid].Toggle()
 			m.persistLayoutIfEnabled()
 		}
