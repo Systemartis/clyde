@@ -155,9 +155,25 @@ func bootKittenLines(p Palette, tick int) []string {
 	}
 
 	body, _ := mascotLines(MascotPersonaMeowl, state, 0)
+
+	// Normalize every row to the block's widest line before styling. The
+	// raw frames are block-aligned (ears/paws are 8 cells, face/body 9),
+	// but bootCenterLine centers each row independently by its own width —
+	// so the narrower rows round ~1 cell to the right and the ears drift
+	// off-center. Equal widths make the whole mascot center as a unit.
+	maxW := 0
+	for _, line := range body {
+		if w := ansiWidth(line); w > maxW {
+			maxW = w
+		}
+	}
+
 	style := lipgloss.NewStyle().Foreground(col)
 	out := make([]string, len(body))
 	for i, line := range body {
+		if pad := maxW - ansiWidth(line); pad > 0 {
+			line += strings.Repeat(" ", pad)
+		}
 		out[i] = style.Render(line)
 	}
 	return out

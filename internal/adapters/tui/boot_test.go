@@ -96,6 +96,29 @@ func TestBootScreenRendersFullSize(t *testing.T) {
 	}
 }
 
+// TestBootKittenLinesEqualWidth verifies every row of the kitten block has
+// the same visible width. bootCenterLine centers each row independently by
+// its own width, so unequal rows (ears/paws are 8 cells, face/body are 9)
+// round apart — the narrower ears drift ~1 cell right of the body and the
+// mascot reads as lopsided. Equal widths make the block center as a unit.
+func TestBootKittenLinesEqualWidth(t *testing.T) {
+	p := TokyoNightPalette()
+	// Cover every phase the splash cycles through: fade-in, the full wave
+	// cadence, and the settled stand — each swaps the body shape.
+	for tick := 0; tick < bootDuration; tick++ {
+		lines := bootKittenLines(p, tick)
+		if len(lines) == 0 {
+			t.Fatalf("tick %d: no kitten lines returned", tick)
+		}
+		want := ansiWidth(lines[0])
+		for i, line := range lines {
+			if got := ansiWidth(line); got != want {
+				t.Errorf("tick %d row %d: visible width %d, want %d — all rows must match so the mascot centers as a unit", tick, i, got, want)
+			}
+		}
+	}
+}
+
 // TestBootKittenWavesDuringWavePhase verifies the kitten frame switches
 // to a paw / wave variant during the wave window.
 func TestBootKittenWavesDuringWavePhase(t *testing.T) {
