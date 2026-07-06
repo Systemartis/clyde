@@ -81,6 +81,35 @@ func TestActivitySoloMain_NoMarkerWhenFits(t *testing.T) {
 	}
 }
 
+// TestActivityHistogramFitsWidth guards against horizontal overflow. The
+// tools-histogram footer ("Bash 3 · Read 2 · …") is the one card line that
+// was not width-bounded to the panel, so a session touching many distinct
+// tools produced a line wider than every other row — stretching the
+// container's content width and letting a stray touchpad swipe scroll the
+// content off-screen. Every rendered line must fit within inner.
+func TestActivityHistogramFitsWidth(t *testing.T) {
+	t.Parallel()
+	s := NewStyles(TokyoNightPalette())
+	p := TokyoNightPalette()
+	d := V3MockData()
+	grp := AgentGroup{AgentID: "main", AgentName: "main", Active: true}
+	for _, tool := range []string{
+		"Bash", "Read", "Edit", "Grep", "Write", "MultiEdit",
+		"Glob", "WebFetch", "Task", "mcp__github", "mcp__playwright", "NotebookEdit",
+	} {
+		grp.Calls = append(grp.Calls, ToolCall{Tool: tool, KeyArg: "x", State: CallDone})
+	}
+	d.AgentGroups = []AgentGroup{grp}
+
+	const inner = 48
+	out := buildCallsContent(s, p, d, inner, 40)
+	for i, line := range strings.Split(out, "\n") {
+		if w := ansiWidth(line); w > inner {
+			t.Errorf("activity line %d exceeds inner width %d (got %d): %q", i, inner, w, stripANSI(line))
+		}
+	}
+}
+
 // TestActivityViewportContent_Unwindowed verifies active mode still gets the
 // FULL history (that's what scrolling is for).
 func TestActivityViewportContent_Unwindowed(t *testing.T) {
