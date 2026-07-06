@@ -160,15 +160,12 @@ func (m Model) transitionToActive() Model {
 		m.persistLayoutIfEnabled()
 	}
 	m.activePanelID = pid
-	// Reset viewport so active mode starts at top (fresh scroll)
+	// Reset viewport so active mode starts at the top (fresh scroll). The
+	// activity panel renders newest-first, so the top of the content IS the
+	// latest activity — that's the anchor we want; history scrolls down.
 	m.panelVPs[pid].SetYOffset(0)
 	// Wire content into viewport now that the panel is being activated
 	m = m.syncPanelViewport(pid)
-	// The activity panel is a stream — the tail (newest calls) is the
-	// natural anchor, mirroring the passive card's tail-windowing.
-	if pid == PanelCalls {
-		m.panelVPs[pid].GotoBottom()
-	}
 	return m
 }
 

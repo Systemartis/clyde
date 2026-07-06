@@ -189,7 +189,9 @@ func renderMainAgentPeekBlock(sb *strings.Builder, s Styles, grp AgentGroup, d M
 	if start < 0 {
 		start = 0
 	}
-	for _, call := range grp.Calls[start:] {
+	// Newest-first peek: the latest call of the session shows directly under
+	// its row, mirroring the full cards.
+	for _, call := range reversedCalls(grp.Calls[start:]) {
 		// Indent two spaces so the peek reads as subordinate to the
 		// session row above. renderCallLine already pads its icon
 		// column; the leading spaces stack cleanly.
@@ -218,6 +220,20 @@ func countMainGroups(groups []AgentGroup) int {
 	return n
 }
 
+// reversedCalls returns a newest-first copy of calls. The activity panel
+// renders the latest activity at the TOP so a glance lands on what claude is
+// doing right now; older calls sit below and scroll off the bottom. The
+// source slice stays oldest-first (histograms, diff matching, and tail
+// windowing all reason in chronological order), so we reverse only for
+// display.
+func reversedCalls(calls []ToolCall) []ToolCall {
+	out := make([]ToolCall, len(calls))
+	for i, c := range calls {
+		out[len(calls)-1-i] = c
+	}
+	return out
+}
+
 // hasAnySubagent reports whether the groups slice contains at least one subagent.
 func hasAnySubagent(groups []AgentGroup) bool {
 	for _, g := range groups {
@@ -242,12 +258,13 @@ func renderSoloMainBlock(sb *strings.Builder, s Styles, p Palette, grp AgentGrou
 	sb.WriteString(renderSoloMainHeader(s, p, displayed, inner))
 	sb.WriteByte('\n')
 
-	// Tail-window the call list to the row budget. Calls render oldest →
-	// newest and wrapPanel clips from the BOTTOM, so without windowing any
-	// session longer than a panelful froze on its earliest calls while new
-	// activity piled up invisibly below the fold. Newest calls win; a faded
-	// "earlier" marker stands in for the scrollback (active mode shows it
-	// all — buildCallsViewportContent passes an unbounded innerH).
+	// Window the call list to the row budget, keeping the NEWEST calls. The
+	// card renders newest-first (latest at the top) so a glance lands on
+	// what claude is doing right now; older calls that don't fit are clipped
+	// behind a "↓ earlier" marker at the bottom. Without windowing, wrapPanel
+	// clips from the BOTTOM and the newest calls would fall off the fold
+	// (active mode shows it all — buildCallsViewportContent passes an
+	// unbounded innerH).
 	calls := grp.Calls
 	hist := toolHistogram(grp.Calls)
 	budget := innerH - 1 // header row
@@ -257,23 +274,26 @@ func renderSoloMainBlock(sb *strings.Builder, s Styles, p Palette, grp AgentGrou
 	if budget < 1 {
 		budget = 1
 	}
+	hidden := 0
 	if len(calls) > budget {
 		visible := budget - 1 // "earlier" marker eats one row
 		if visible < 0 {
 			visible = 0
 		}
-		hidden := len(calls) - visible
+		hidden = len(calls) - visible
 		calls = calls[len(calls)-visible:]
-		sb.WriteString(s.TaskDur.Render(fmt.Sprintf("    ↑ %d earlier", hidden)))
-		sb.WriteByte('\n')
 	}
-	for _, call := range calls {
+	for _, call := range reversedCalls(calls) {
 		sb.WriteString(renderCallLine(s, call, inner))
 		sb.WriteByte('\n')
 		if !diffShown && callMatchesDiff(call, d) {
 			sb.WriteString(renderInlineDiff(s, d.DiffLines, inner))
 			diffShown = true
 		}
+	}
+	if hidden > 0 {
+		sb.WriteString(s.TaskDur.Render(fmt.Sprintf("    ↓ %d earlier", hidden)))
+		sb.WriteByte('\n')
 	}
 	if hist != "" {
 		sb.WriteString(s.TaskSubtitle.Render("    " + hist))
@@ -318,7 +338,10 @@ func renderMainAgentBlock(sb *strings.Builder, s Styles, grp AgentGroup, d MockD
 func renderSubagentBlock(sb *strings.Builder, s Styles, p Palette, grp AgentGroup, d MockData, inner int, diffShown bool) bool {
 	sb.WriteString(renderSubagentHeader(s, p, grp, inner))
 	sb.WriteByte('\n')
-	for _, call := range grp.Calls {
+	// Newest-first, matching the solo-main card: the latest call sits under
+	// the header and older calls fall below (clipped from the bottom when the
+	// card overflows).
+	for _, call := range reversedCalls(grp.Calls) {
 		sb.WriteString(renderCallLine(s, call, inner))
 		sb.WriteByte('\n')
 		if !diffShown && callMatchesDiff(call, d) {

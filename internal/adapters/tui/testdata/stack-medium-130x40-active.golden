@@ -17,9 +17,9 @@
 │   ◇ tsconfig.json                              │║       + 4 more hunks                                                         ║
 │   ◇ .gitignore                                 │║                                                                              ║
 │   ◆ vite.config.ts                             │║ ▼ explore-content · done · 3 calls                                           ║
-│                                                │║ ✓  Read docs/api-spec.md                                                  2s ║
-│                                                │║ ✓  Grep 'verifyToken' --type go                                           1s ║
 │                                                │║ ✓  Read internal/handler.go                                               3s ║
+│                                                │║ ✓  Grep 'verifyToken' --type go                                           1s ║
+│                                                │║ ✓  Read docs/api-spec.md                                                  2s ║
 │                                                │║     Read 2 · Grep 1                                                          ║
 │                                                │║                                                                              ║
 ╰────────────────────────────────────────────────╯║ ▼ propose-rendering · done · 3 calls                                         ║

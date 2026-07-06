@@ -17,20 +17,20 @@
 │   ◇ tsconfig.json  ││       + 4 more hunks                                                                                             │╭ servers ──────────────────────── 5 / 7 ╮
 │   ◇ .gitignore     ││                                                                                                                  ││ mcps · 3 / 4                           │
 │   ◆ vite.config.ts ││ ▼ explore-content · done · 3 calls                                                                               ││ ● filesystem                        12 │
-│                    ││ ✓  Read docs/api-spec.md                                                                                      2s ││ ● github                             8 │
+│                    ││ ✓  Read internal/handler.go                                                                                   3s ││ ● github                             8 │
 │                    ││ ✓  Grep 'verifyToken' --type go                                                                               1s ││ ● memory                             3 │
-│                    ││ ✓  Read internal/handler.go                                                                                   3s ││ ● playwright                           │
+│                    ││ ✓  Read docs/api-spec.md                                                                                      2s ││ ● playwright                           │
 │                    ││     Read 2 · Grep 1                                                                                              ││ ················                       │
 │                    ││                                                                                                                  ││ lsps · 2 / 3                           │
 │                    ││ ▼ propose-rendering · done · 3 calls                                                                             ││ ● tsserver                             │
-│                    ││ ✓  Read openspec/changes/event-rendering/spec.md                                                              2s ││ ● rust-analyzer                        │
+│                    ││ ▶  Edit openspec/changes/event-rendering/proposal.md                                                          1s ││ ● rust-analyzer                        │
 │                    ││ ✓  Read internal/adapters/jsonl/jsonl.go                                                                      4s ││ ● pylsp                                │
-│                    ││ ▶  Edit openspec/changes/event-rendering/proposal.md                                                          1s ││                                        │
+│                    ││ ✓  Read openspec/changes/event-rendering/spec.md                                                              2s ││                                        │
 │                    ││     Read 2 · Edit 1                                                                                              ││                                        │
 │                    ││                                                                                                                  ││                                        │
 │                    ││ ▼ run-tests-batch · running · 2 calls                                                                            ││                                        │
-│                    ││ ✓  Bash 'go test ./domain/...'                                                                               21s ││                                        │
 │                    ││ ▶  Bash 'go test ./adapters/...'                                                                             11s ││                                        │
+│                    ││ ✓  Bash 'go test ./domain/...'                                                                               21s ││                                        │
 │                    ││     Bash 2                                                                                                       ││                                        │
 │                    ││                                                                                                                  ││                                        │
 │                    ││ ▼ compaction-check · idle · 0 calls                                                                              ││                                        │

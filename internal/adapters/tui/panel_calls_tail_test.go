@@ -22,13 +22,13 @@ func soloMainData(n int) MockData {
 	return d
 }
 
-// TestActivitySoloMain_TailWindowed is the regression test for "activity
-// panel never follows the live tail": the solo-main card rendered every
-// call oldest-first and wrapPanel clips from the BOTTOM, so any session
-// past ~a panelful of calls showed only stale early-session calls forever.
-// The passive card must window to the NEWEST calls that fit, with an
-// "earlier" marker for the rest.
-func TestActivitySoloMain_TailWindowed(t *testing.T) {
+// TestActivitySoloMain_HeadWindowed verifies the activity panel renders
+// newest-first: the latest call sits at the TOP of the card, older calls
+// fall below it, and the overflow that doesn't fit is clipped at the bottom
+// behind an "earlier" marker. This preserves the original guarantee that the
+// newest activity is always visible — it just anchors it to the head so a
+// glance lands on what claude is doing right now.
+func TestActivitySoloMain_HeadWindowed(t *testing.T) {
 	t.Parallel()
 	s := NewStyles(TokyoNightPalette())
 	p := TokyoNightPalette()
@@ -37,16 +37,20 @@ func TestActivitySoloMain_TailWindowed(t *testing.T) {
 	out := stripANSI(buildCallsContent(s, p, d, 60, 12))
 
 	if !strings.Contains(out, "call-030") {
-		t.Errorf("tail-windowed card must show the NEWEST call (call-030), got:\n%s", out)
+		t.Errorf("head-windowed card must show the NEWEST call (call-030), got:\n%s", out)
 	}
 	if strings.Contains(out, "call-001") {
-		t.Errorf("tail-windowed card must not show the oldest call (call-001) in a 12-row panel, got:\n%s", out)
+		t.Errorf("head-windowed card must clip the oldest call (call-001) in a 12-row panel, got:\n%s", out)
 	}
 	if !strings.Contains(out, "earlier") {
 		t.Errorf("truncated card must show an 'earlier' marker, got:\n%s", out)
 	}
-	// Content must respect the row budget (wrapPanel would clip the tail
-	// we just fought to show).
+	// Newest-first: the latest call must render ABOVE the next-latest.
+	if i030, i029 := strings.Index(out, "call-030"), strings.Index(out, "call-029"); i030 < 0 || i029 < 0 || i030 > i029 {
+		t.Errorf("newest call must appear above older calls: call-030 at %d, call-029 at %d\n%s", i030, i029, out)
+	}
+	// Content must respect the row budget (wrapPanel would clip whatever
+	// overflows the bottom — which must NOT be the newest calls).
 	if lines := strings.Count(out, "\n") + 1; lines > 12 {
 		t.Errorf("solo-main card produced %d lines for innerH=12 — overflow gets bottom-clipped", lines)
 	}
@@ -71,6 +75,10 @@ func TestActivitySoloMain_NoMarkerWhenFits(t *testing.T) {
 	if strings.Contains(out, "earlier") {
 		t.Errorf("short session must not show an 'earlier' marker:\n%s", out)
 	}
+	// Even when everything fits, order is newest-first.
+	if i4, i1 := strings.Index(out, "call-004"), strings.Index(out, "call-001"); i4 < 0 || i1 < 0 || i4 > i1 {
+		t.Errorf("newest call must render above oldest: call-004 at %d, call-001 at %d\n%s", i4, i1, out)
+	}
 }
 
 // TestActivityViewportContent_Unwindowed verifies active mode still gets the
@@ -85,11 +93,16 @@ func TestActivityViewportContent_Unwindowed(t *testing.T) {
 	if !strings.Contains(content, "call-001") || !strings.Contains(content, "call-030") {
 		t.Error("active-mode viewport content must contain the full call history")
 	}
+	// Newest-first ordering holds in the scrollable content too.
+	if i30, i1 := strings.Index(content, "call-030"), strings.Index(content, "call-001"); i30 > i1 {
+		t.Errorf("viewport must be newest-first: call-030 at %d, call-001 at %d", i30, i1)
+	}
 }
 
-// TestActivityActiveMode_StartsAtTail verifies entering active mode on the
-// calls panel lands at the BOTTOM of the history (newest calls), not the top.
-func TestActivityActiveMode_StartsAtTail(t *testing.T) {
+// TestActivityActiveMode_StartsAtHead verifies entering active mode on the
+// calls panel lands at the TOP of the history (newest calls), so the user
+// scrolls DOWN to reach older activity.
+func TestActivityActiveMode_StartsAtHead(t *testing.T) {
 	t.Parallel()
 	m := NewModelWithConfig(DefaultConfig(), LayoutStack)
 	m.width = 90
@@ -101,16 +114,16 @@ func TestActivityActiveMode_StartsAtTail(t *testing.T) {
 
 	m = m.transitionToActive()
 
-	if !m.panelVPs[PanelCalls].AtBottom() {
-		t.Errorf("activity active mode must start at the tail; YOffset = %d of %d lines",
+	if !m.panelVPs[PanelCalls].AtTop() {
+		t.Errorf("activity active mode must start at the head; YOffset = %d of %d lines",
 			m.panelVPs[PanelCalls].YOffset(), m.panelVPs[PanelCalls].TotalLineCount())
 	}
 }
 
-// TestActivityResync_SticksToTail verifies a live refresh keeps the view
-// pinned to the tail when the user was already there, but does NOT yank a
-// user who scrolled up to read history.
-func TestActivityResync_SticksToTail(t *testing.T) {
+// TestActivityResync_SticksToHead verifies a live refresh keeps the view
+// pinned to the head (newest) when the user was already there, but does NOT
+// yank a user who scrolled down to read history.
+func TestActivityResync_SticksToHead(t *testing.T) {
 	t.Parallel()
 	m := NewModelWithConfig(DefaultConfig(), LayoutStack)
 	m.width = 90
@@ -119,21 +132,24 @@ func TestActivityResync_SticksToTail(t *testing.T) {
 	m.layoutMode = LayoutStack
 	m.data = soloMainData(60)
 	m.focused = PanelCalls
-	m = m.transitionToActive() // at tail
+	m = m.transitionToActive() // at head
 
-	// New calls arrive; resync. View must follow the tail.
+	// New calls arrive; resync. View must stay at the head (newest).
 	m.data = soloMainData(70)
 	m = m.syncPanelViewport(PanelCalls)
-	if !m.panelVPs[PanelCalls].AtBottom() {
-		t.Error("resync while at tail must stick to the tail")
+	if !m.panelVPs[PanelCalls].AtTop() {
+		t.Error("resync while at head must stick to the head")
 	}
 
-	// User scrolls up to read history; resync must NOT yank to bottom.
-	m.panelVPs[PanelCalls].ScrollUp(5)
+	// User scrolls down to read history; resync must NOT yank to the head.
+	m.panelVPs[PanelCalls].ScrollDown(5)
 	before := m.panelVPs[PanelCalls].YOffset()
+	if before == 0 {
+		t.Fatal("precondition: user should be scrolled away from the head")
+	}
 	m.data = soloMainData(80)
 	m = m.syncPanelViewport(PanelCalls)
 	if got := m.panelVPs[PanelCalls].YOffset(); got != before {
-		t.Errorf("resync while scrolled up must keep YOffset %d, got %d", before, got)
+		t.Errorf("resync while scrolled down must keep YOffset %d, got %d", before, got)
 	}
 }
