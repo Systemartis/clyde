@@ -296,7 +296,7 @@ func renderSoloMainBlock(sb *strings.Builder, s Styles, p Palette, grp AgentGrou
 		sb.WriteByte('\n')
 	}
 	if hist != "" {
-		sb.WriteString(s.TaskSubtitle.Render("    " + hist))
+		sb.WriteString(s.TaskSubtitle.Render(truncate("    "+hist, inner)))
 		sb.WriteByte('\n')
 	}
 	return diffShown
@@ -350,7 +350,7 @@ func renderSubagentBlock(sb *strings.Builder, s Styles, p Palette, grp AgentGrou
 		}
 	}
 	if hist := toolHistogram(grp.Calls); hist != "" {
-		sb.WriteString(s.TaskSubtitle.Render("    " + hist))
+		sb.WriteString(s.TaskSubtitle.Render(truncate("    "+hist, inner)))
 		sb.WriteByte('\n')
 	}
 	return diffShown
