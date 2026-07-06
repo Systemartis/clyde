@@ -74,14 +74,16 @@ func (m Model) panelWidthMultiCol(pid PanelID) int {
 // render function on a local copy) results in stale-width content that clips
 // incorrectly when the render-time viewport width differs.
 func (m Model) syncPanelViewport(pid PanelID) Model {
-	// Stick-to-tail: when the user is already at the bottom of a STREAM
-	// panel (activity / bash ledger), a content refresh keeps them there.
-	// A user who scrolled up to read history is not yanked back down.
-	// Gated on existing content: an empty viewport reports AtBottom()=true,
-	// which would wrongly tail-anchor every panel's first sync (usage and
-	// diff want the top).
-	isStream := pid == PanelCalls || pid == PanelBash
-	wasAtBottom := isStream && m.panelVPs[pid].TotalLineCount() > 0 && m.panelVPs[pid].AtBottom()
+	// Stick-to-anchor: when the user is parked at a STREAM panel's live edge,
+	// a content refresh keeps them there; a user who scrolled away to read
+	// history is not yanked back. The activity panel renders newest-first, so
+	// its live edge is the HEAD (top); the bash ledger is oldest-first, so its
+	// live edge is the TAIL (bottom). Gated on existing content: an empty
+	// viewport reports both AtTop() and AtBottom() true, which would wrongly
+	// anchor every panel's first sync (usage and diff want the top).
+	hasContent := m.panelVPs[pid].TotalLineCount() > 0
+	wasAtHead := pid == PanelCalls && hasContent && m.panelVPs[pid].AtTop()
+	wasAtBottom := pid == PanelBash && hasContent && m.panelVPs[pid].AtBottom()
 	panelW := m.panelRenderWidth(pid)
 	// inner = panel outer width - 2 border - 2 padding chars (1 left + 1 right)
 	inner := panelW - 4
@@ -118,6 +120,9 @@ func (m Model) syncPanelViewport(pid PanelID) Model {
 	case PanelCache:
 		content := buildCacheViewportContent(m.styles, m.palette, m.data, inner)
 		m.panelVPs[pid].SetContent(content)
+	}
+	if wasAtHead {
+		m.panelVPs[pid].GotoTop()
 	}
 	if wasAtBottom {
 		m.panelVPs[pid].GotoBottom()
