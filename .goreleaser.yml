@@ -9,7 +9,17 @@ version: 2
 
 before:
   hooks:
-    - go mod tidy
+    # `go mod download` — deliberately NOT `go mod tidy`.
+    #
+    # tidy resolves the *test* dependencies of our dependencies (e.g.
+    # github.com/xo/terminfo.test -> golang.org/x/exp), modules that are
+    # never linked into the binary. That made the release pipeline fail on
+    # a transient proxy.golang.org 502 for code we don't ship. It also
+    # mutates go.mod/go.sum mid-release, which a release must never do.
+    #
+    # download only fetches the build list, and warms the module cache so
+    # the parallel per-GOOS/GOARCH builds below don't race on it.
+    - go mod download
 
 builds:
   - id: clyde
