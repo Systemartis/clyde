@@ -26,3 +26,19 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    groups:
+      # init, analyze and upload-sarif are sub-paths of ONE action published
+      # from one repo at one commit — Dependabot treats each sub-path as a
+      # separate dependency and opens a PR per path. Each of those PRs is
+      # broken on its own: CodeQL refuses to run when the versions drift
+      # ("Not all workflow steps that use `github/codeql-action` actions use
+      # the same version"), so a per-path PR fails its own required check and
+      # can never merge. Grouping makes them move as the unit they are.
+      codeql-action:
+        # Both forms listed explicitly rather than relying on a bare
+        # `github/codeql-action*` — whether a trailing `*` crosses a `/` is a
+        # glob-semantics detail, and a group that silently matches nothing
+        # fails open (back to one broken PR per sub-path).
+        patterns:
+          - "github/codeql-action"
+          - "github/codeql-action/*"
