@@ -32,6 +32,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // hookBodyCap bounds the size of an incoming hook payload. Real hook
@@ -44,6 +45,41 @@ const hookBodyCap int64 = 64 << 10
 // token. 32 bytes (256 bits) is overkill for a localhost listener but
 // has no real cost and brings us into "obviously secure" territory.
 const hookTokenBytes = 32
+
+// maxLogValueLen bounds a single attacker-influenced attribute after
+// escaping. The body is already capped at hookBodyCap, but that still
+// leaves room for a 64 KiB "tool name" that would drown every other
+// record in the log file.
+const maxLogValueLen = 256
+
+// sanitizeLogValue neutralizes a value that came off the wire before it is
+// handed to slog. tool_name and hook_type are chosen by whoever posted to
+// /hook, so a raw value could carry line breaks and forge log records that
+// look like clyde wrote them (CodeQL go/log-injection). The JSON handler
+// escapes them today, but escaping here is defense-in-depth for any
+// line-oriented handler that might be swapped in. It is not a universal
+// source-level guarantee: NUL, ESC and U+2028 are deliberately left to the
+// handler's own escaping.
+//
+// Truncation is applied after escaping so the cap bounds what is actually
+// written. The cut backs off at most one split trailing rune, so a value
+// that already carried invalid UTF-8 before the cap is truncated rather
+// than erased — these fields are the audit trail for denied hook calls, and
+// the JSON handler substitutes the replacement character for whatever bytes
+// remain invalid.
+func sanitizeLogValue(s string) string {
+	s = strings.ReplaceAll(s, "\n", `\n`)
+	s = strings.ReplaceAll(s, "\r", `\r`)
+	if len(s) > maxLogValueLen {
+		// s[cut] is always in range here: len(s) > maxLogValueLen >= cut.
+		cut := maxLogValueLen
+		for cut > maxLogValueLen-utf8.UTFMax && !utf8.RuneStart(s[cut]) {
+			cut--
+		}
+		s = s[:cut]
+	}
+	return s
+}
 
 // HookEvent represents a single PreToolUse hook invocation from the claude CLI.
 // The HTTP request that delivered this event is blocked until ResponseCh
@@ -263,8 +299,8 @@ func (s *Server) handleHook(w http.ResponseWriter, r *http.Request) {
 	case s.events <- evt:
 	default:
 		slog.Warn("hookserver: events channel full — denying",
-			slog.String("tool", req.Tool),
-			slog.String("hook_type", req.HookType),
+			slog.String("tool", sanitizeLogValue(req.Tool)),
+			slog.String("hook_type", sanitizeLogValue(req.HookType)),
 		)
 		writeDeny(w, "clyde busy — re-run the tool to retry")
 		return
@@ -274,15 +310,15 @@ func (s *Server) handleHook(w http.ResponseWriter, r *http.Request) {
 	resp, ok := <-evt.ResponseCh
 	if !ok || resp.Allow {
 		slog.Debug("hookserver: allow",
-			slog.String("tool", req.Tool),
-			slog.String("hook_type", req.HookType),
+			slog.String("tool", sanitizeLogValue(req.Tool)),
+			slog.String("hook_type", sanitizeLogValue(req.HookType)),
 		)
 		writeAllow(w)
 		return
 	}
 	slog.Info("hookserver: deny",
-		slog.String("tool", req.Tool),
-		slog.String("hook_type", req.HookType),
+		slog.String("tool", sanitizeLogValue(req.Tool)),
+		slog.String("hook_type", sanitizeLogValue(req.HookType)),
 		slog.String("reason", resp.Reason),
 	)
 	writeDeny(w, resp.Reason)
